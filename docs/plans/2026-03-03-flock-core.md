@@ -1,0 +1,1803 @@
+# Flock Core Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** Build a working local dev environment manager (Go + Wails) where a user can add a PHP project directory and immediately reach it at `https://myapp.test` with a valid local TLS cert.
+
+**Architecture:** First-party-as-plugin — the core provides a plugin host, embedded Caddy reverse proxy, and site registry. PHP, SSL, and database support are bundled first-party plugins that exercise the plugin API, making it ready for future external plugins.
+
+**Tech Stack:** Go 1.22+, Wails v2, Caddy v2 (embedded as Go library), mkcert (shelled out), PHP-FPM (shelled out)
+
+---
+
+## Task 1: Project Scaffold
+
+**Files:**
+- Create: `go.mod`
+- Create: `main.go`
+- Create: `app.go`
+- Create: `internal/config/paths.go`
+- Create: `.github/workflows/ci.yml`
+
+**Step 1: Initialize Wails project**
+
+From the repo root:
+```bash
+wails init -n flock -t vanilla
+```
+
+This generates `go.mod`, `main.go`, `app.go`, `frontend/`, and `wails.json`. Accept all defaults.
+
+**Step 2: Verify it builds**
+
+```bash
+wails build
+```
+Expected: binary produced in `build/bin/`. No errors.
+
+**Step 3: Write paths test**
+
+Create `internal/config/paths_test.go`:
+```go
+package config_test
+
+import (
+    "os"
+    "path/filepath"
+    "testing"
+
+    "github.com/andybarilla/flock/internal/config"
+)
+
+func TestConfigDir(t *testing.T) {
+    dir := config.ConfigDir()
+    if dir == "" {
+        t.Fatal("ConfigDir returned empty string")
+    }
+}
+
+func TestDataDir(t *testing.T) {
+    dir := config.DataDir()
+    if dir == "" {
+        t.Fatal("DataDir returned empty string")
+    }
+}
+
+func TestSitesFile(t *testing.T) {
+    got := config.SitesFile()
+    want := filepath.Join(config.ConfigDir(), "sites.json")
+    if got != want {
+        t.Errorf("SitesFile() = %q, want %q", got, want)
+    }
+}
+
+func TestLogFile(t *testing.T) {
+    got := config.LogFile()
+    want := filepath.Join(config.DataDir(), "flock.log")
+    if got != want {
+        t.Errorf("LogFile() = %q, want %q", got, want)
+    }
+}
+```
+
+**Step 4: Run test to verify it fails**
+
+```bash
+go test ./internal/config/...
+```
+Expected: FAIL — package does not exist.
+
+**Step 5: Implement paths**
+
+Create `internal/config/paths.go`:
+```go
+package config
+
+import (
+    "os"
+    "path/filepath"
+    "runtime"
+)
+
+// ConfigDir returns the platform-appropriate config directory for Flock.
+// Linux/macOS: ~/.config/flock
+// Windows:     %APPDATA%\flock
+func ConfigDir() string {
+    switch runtime.GOOS {
+    case "windows":
+        return filepath.Join(os.Getenv("APPDATA"), "flock")
+    default:
+        home, _ := os.UserHomeDir()
+        return filepath.Join(home, ".config", "flock")
+    }
+}
+
+// DataDir returns the platform-appropriate data/log directory for Flock.
+// Linux/macOS: ~/.local/share/flock
+// Windows:     %APPDATA%\flock
+func DataDir() string {
+    switch runtime.GOOS {
+    case "windows":
+        return filepath.Join(os.Getenv("APPDATA"), "flock")
+    default:
+        home, _ := os.UserHomeDir()
+        return filepath.Join(home, ".local", "share", "flock")
+    }
+}
+
+// SitesFile returns the path to the site registry JSON file.
+func SitesFile() string {
+    return filepath.Join(ConfigDir(), "sites.json")
+}
+
+// LogFile returns the path to the Flock log file.
+func LogFile() string {
+    return filepath.Join(DataDir(), "flock.log")
+}
+```
+
+**Step 6: Run test to verify it passes**
+
+```bash
+go test ./internal/config/... -v
+```
+Expected: PASS — all 4 tests pass.
+
+**Step 7: Write CI workflow**
+
+Create `.github/workflows/ci.yml`:
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main, "task/**"]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+      - run: go test ./... -v
+```
+
+**Step 8: Commit**
+
+```bash
+git add .
+git commit -m "feat: scaffold Go/Wails project with config paths and CI"
+```
+
+---
+
+## Task 2: Site Registry
+
+**Files:**
+- Create: `internal/registry/site.go`
+- Create: `internal/registry/registry.go`
+- Create: `internal/registry/registry_test.go`
+
+**Step 1: Write failing tests**
+
+Create `internal/registry/registry_test.go`:
+```go
+package registry_test
+
+import (
+    "os"
+    "path/filepath"
+    "testing"
+
+    "github.com/andybarilla/flock/internal/registry"
+)
+
+func tempFile(t *testing.T) string {
+    t.Helper()
+    f := filepath.Join(t.TempDir(), "sites.json")
+    return f
+}
+
+func TestAddAndList(t *testing.T) {
+    r := registry.New(tempFile(t))
+
+    site := registry.Site{
+        Path:       "/home/user/myapp",
+        Domain:     "myapp.test",
+        PHPVersion: "8.3",
+        TLS:        true,
+    }
+
+    if err := r.Add(site); err != nil {
+        t.Fatalf("Add: %v", err)
+    }
+
+    sites := r.List()
+    if len(sites) != 1 {
+        t.Fatalf("expected 1 site, got %d", len(sites))
+    }
+    if sites[0].Domain != "myapp.test" {
+        t.Errorf("domain = %q, want %q", sites[0].Domain, "myapp.test")
+    }
+}
+
+func TestAddDuplicateDomainErrors(t *testing.T) {
+    r := registry.New(tempFile(t))
+    site := registry.Site{Path: "/a", Domain: "myapp.test", TLS: true}
+
+    if err := r.Add(site); err != nil {
+        t.Fatalf("first Add: %v", err)
+    }
+    if err := r.Add(site); err == nil {
+        t.Fatal("expected error adding duplicate domain, got nil")
+    }
+}
+
+func TestRemove(t *testing.T) {
+    r := registry.New(tempFile(t))
+    site := registry.Site{Path: "/a", Domain: "myapp.test", TLS: true}
+    _ = r.Add(site)
+
+    if err := r.Remove("myapp.test"); err != nil {
+        t.Fatalf("Remove: %v", err)
+    }
+    if len(r.List()) != 0 {
+        t.Fatal("expected 0 sites after remove")
+    }
+}
+
+func TestRemoveNonexistentErrors(t *testing.T) {
+    r := registry.New(tempFile(t))
+    if err := r.Remove("nope.test"); err == nil {
+        t.Fatal("expected error removing nonexistent domain")
+    }
+}
+
+func TestPersistence(t *testing.T) {
+    path := tempFile(t)
+    r1 := registry.New(path)
+    site := registry.Site{Path: "/a", Domain: "myapp.test", TLS: true}
+    _ = r1.Add(site)
+
+    r2 := registry.New(path)
+    if err := r2.Load(); err != nil {
+        t.Fatalf("Load: %v", err)
+    }
+    sites := r2.List()
+    if len(sites) != 1 {
+        t.Fatalf("expected 1 site after reload, got %d", len(sites))
+    }
+}
+
+func TestInferDomain(t *testing.T) {
+    cases := []struct {
+        path   string
+        domain string
+    }{
+        {"/home/user/myapp", "myapp.test"},
+        {"/home/user/my-cool-app", "my-cool-app.test"},
+        {"/home/user/myapp/", "myapp.test"},
+    }
+    for _, c := range cases {
+        got := registry.InferDomain(c.path)
+        if got != c.domain {
+            t.Errorf("InferDomain(%q) = %q, want %q", c.path, got, c.domain)
+        }
+    }
+}
+```
+
+**Step 2: Run to verify failure**
+
+```bash
+go test ./internal/registry/... -v
+```
+Expected: FAIL — package does not exist.
+
+**Step 3: Implement Site and Registry**
+
+Create `internal/registry/site.go`:
+```go
+package registry
+
+// Site represents a local directory registered as a dev site.
+type Site struct {
+    Path       string `json:"path"`
+    Domain     string `json:"domain"`
+    PHPVersion string `json:"php_version,omitempty"`
+    TLS        bool   `json:"tls"`
+}
+```
+
+Create `internal/registry/registry.go`:
+```go
+package registry
+
+import (
+    "encoding/json"
+    "errors"
+    "fmt"
+    "os"
+    "path/filepath"
+    "strings"
+)
+
+// Registry persists and manages the list of registered sites.
+type Registry struct {
+    path  string
+    sites []Site
+}
+
+// New creates a Registry backed by the given JSON file path.
+// The file need not exist yet; it will be created on the first write.
+func New(path string) *Registry {
+    return &Registry{path: path}
+}
+
+// Load reads the registry from disk. Safe to call on a missing file (treats it as empty).
+func (r *Registry) Load() error {
+    data, err := os.ReadFile(r.path)
+    if errors.Is(err, os.ErrNotExist) {
+        return nil
+    }
+    if err != nil {
+        return fmt.Errorf("read registry: %w", err)
+    }
+    return json.Unmarshal(data, &r.sites)
+}
+
+// List returns all registered sites.
+func (r *Registry) List() []Site {
+    out := make([]Site, len(r.sites))
+    copy(out, r.sites)
+    return out
+}
+
+// Add registers a new site. Returns an error if the domain is already registered.
+func (r *Registry) Add(s Site) error {
+    for _, existing := range r.sites {
+        if existing.Domain == s.Domain {
+            return fmt.Errorf("domain %q is already registered", s.Domain)
+        }
+    }
+    r.sites = append(r.sites, s)
+    return r.save()
+}
+
+// Remove unregisters a site by domain. Returns an error if not found.
+func (r *Registry) Remove(domain string) error {
+    for i, s := range r.sites {
+        if s.Domain == domain {
+            r.sites = append(r.sites[:i], r.sites[i+1:]...)
+            return r.save()
+        }
+    }
+    return fmt.Errorf("domain %q not found", domain)
+}
+
+func (r *Registry) save() error {
+    if err := os.MkdirAll(filepath.Dir(r.path), 0o755); err != nil {
+        return fmt.Errorf("create config dir: %w", err)
+    }
+    data, err := json.MarshalIndent(r.sites, "", "  ")
+    if err != nil {
+        return fmt.Errorf("marshal registry: %w", err)
+    }
+    return os.WriteFile(r.path, data, 0o644)
+}
+
+// InferDomain returns a .test domain derived from the directory name.
+func InferDomain(path string) string {
+    name := filepath.Base(strings.TrimRight(path, "/\\"))
+    return name + ".test"
+}
+```
+
+**Step 4: Run tests to verify they pass**
+
+```bash
+go test ./internal/registry/... -v
+```
+Expected: PASS — all 6 tests pass.
+
+**Step 5: Commit**
+
+```bash
+git add internal/registry/
+git commit -m "feat: add site registry with JSON persistence"
+```
+
+---
+
+## Task 3: Plugin Interfaces
+
+**Files:**
+- Create: `internal/plugin/interfaces.go`
+- Create: `internal/plugin/mock_host.go`
+- Create: `internal/plugin/interfaces_test.go`
+
+**Step 1: Write failing test**
+
+Create `internal/plugin/interfaces_test.go`:
+```go
+package plugin_test
+
+import (
+    "testing"
+
+    "github.com/andybarilla/flock/internal/plugin"
+    "github.com/andybarilla/flock/internal/registry"
+)
+
+// stubPlugin implements Plugin for testing.
+type stubPlugin struct {
+    id      string
+    started bool
+    stopped bool
+}
+
+func (s *stubPlugin) ID() string                    { return s.id }
+func (s *stubPlugin) Name() string                  { return s.id }
+func (s *stubPlugin) Init(_ plugin.Host) error       { return nil }
+func (s *stubPlugin) Start() error                  { s.started = true; return nil }
+func (s *stubPlugin) Stop() error                   { s.stopped = true; return nil }
+
+// stubRuntime also implements RuntimePlugin.
+type stubRuntime struct {
+    stubPlugin
+    handles bool
+}
+
+func (s *stubRuntime) Handles(_ registry.Site) bool            { return s.handles }
+func (s *stubRuntime) UpstreamFor(_ registry.Site) (string, error) {
+    return "fastcgi://127.0.0.1:9000", nil
+}
+
+func TestPluginInterface(t *testing.T) {
+    var p plugin.Plugin = &stubPlugin{id: "test"}
+    if p.ID() != "test" {
+        t.Errorf("ID() = %q, want %q", p.ID(), "test")
+    }
+}
+
+func TestRuntimePluginInterface(t *testing.T) {
+    var rp plugin.RuntimePlugin = &stubRuntime{stubPlugin: stubPlugin{id: "rt"}, handles: true}
+    site := registry.Site{Domain: "test.test"}
+    if !rp.Handles(site) {
+        t.Error("expected Handles to return true")
+    }
+    upstream, err := rp.UpstreamFor(site)
+    if err != nil {
+        t.Fatalf("UpstreamFor: %v", err)
+    }
+    if upstream == "" {
+        t.Error("expected non-empty upstream")
+    }
+}
+```
+
+**Step 2: Run to verify failure**
+
+```bash
+go test ./internal/plugin/... -v
+```
+Expected: FAIL — package does not exist.
+
+**Step 3: Implement interfaces**
+
+Create `internal/plugin/interfaces.go`:
+```go
+package plugin
+
+import "github.com/andybarilla/flock/internal/registry"
+
+// Plugin is the base interface all Flock plugins must implement.
+type Plugin interface {
+    ID() string
+    Name() string
+    Init(host Host) error
+    Start() error
+    Stop() error
+}
+
+// RuntimePlugin is implemented by plugins that serve project types
+// (e.g. PHP, Node). The host calls Handles to find the right plugin
+// for a site, then UpstreamFor to get the Caddy upstream string.
+type RuntimePlugin interface {
+    Plugin
+    Handles(site registry.Site) bool
+    UpstreamFor(site registry.Site) (string, error)
+}
+
+// ServicePlugin is implemented by plugins that manage background
+// services (e.g. MySQL, Redis).
+type ServicePlugin interface {
+    Plugin
+    ServiceStatus() ServiceStatus
+    StartService() error
+    StopService() error
+}
+
+// ServiceStatus represents the running state of a managed service.
+type ServiceStatus int
+
+const (
+    StatusStopped ServiceStatus = iota
+    StatusStarting
+    StatusRunning
+    StatusError
+)
+
+// Host is the API surface the core exposes to plugins.
+type Host interface {
+    // Logf writes a formatted message to the Flock log.
+    Logf(format string, args ...any)
+    // NotifyError surfaces an error notification in the GUI.
+    NotifyError(title, message string)
+}
+```
+
+Create `internal/plugin/mock_host.go`:
+```go
+package plugin
+
+import (
+    "fmt"
+    "sync"
+)
+
+// MockHost is a Host implementation for use in tests.
+type MockHost struct {
+    mu   sync.Mutex
+    Logs []string
+    Errors []struct{ Title, Message string }
+}
+
+func (m *MockHost) Logf(format string, args ...any) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    m.Logs = append(m.Logs, fmt.Sprintf(format, args...))
+}
+
+func (m *MockHost) NotifyError(title, message string) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    m.Errors = append(m.Errors, struct{ Title, Message string }{title, message})
+}
+```
+
+**Step 4: Run tests to verify they pass**
+
+```bash
+go test ./internal/plugin/... -v
+```
+Expected: PASS.
+
+**Step 5: Commit**
+
+```bash
+git add internal/plugin/
+git commit -m "feat: define plugin interfaces and mock host"
+```
+
+---
+
+## Task 4: Plugin Host (Lifecycle Manager)
+
+**Files:**
+- Create: `internal/plugin/host.go`
+- Create: `internal/plugin/host_test.go`
+
+**Step 1: Write failing tests**
+
+Create `internal/plugin/host_test.go`:
+```go
+package plugin_test
+
+import (
+    "errors"
+    "testing"
+
+    "github.com/andybarilla/flock/internal/plugin"
+)
+
+type lifecyclePlugin struct {
+    stubPlugin
+    initErr  error
+    startErr error
+    initCalled bool
+}
+
+func (p *lifecyclePlugin) Init(_ plugin.Host) error {
+    p.initCalled = true
+    return p.initErr
+}
+func (p *lifecyclePlugin) Start() error { return p.startErr }
+
+func TestHostStartsPlugins(t *testing.T) {
+    h := plugin.NewHost(&plugin.MockHost{})
+    p := &lifecyclePlugin{stubPlugin: stubPlugin{id: "a"}}
+    h.Register(p)
+
+    if err := h.StartAll(); err != nil {
+        t.Fatalf("StartAll: %v", err)
+    }
+    if !p.initCalled {
+        t.Error("expected Init to be called")
+    }
+    if !p.started {
+        t.Error("expected Start to be called")
+    }
+}
+
+func TestHostContinuesOnPluginInitFailure(t *testing.T) {
+    mock := &plugin.MockHost{}
+    h := plugin.NewHost(mock)
+    bad := &lifecyclePlugin{stubPlugin: stubPlugin{id: "bad"}, initErr: errors.New("boom")}
+    good := &lifecyclePlugin{stubPlugin: stubPlugin{id: "good"}}
+    h.Register(bad)
+    h.Register(good)
+
+    // StartAll should not return an error — degraded plugins are logged, not fatal
+    if err := h.StartAll(); err != nil {
+        t.Fatalf("StartAll should not fail on plugin error, got: %v", err)
+    }
+    if !good.initCalled {
+        t.Error("expected good plugin to still be initialized")
+    }
+    if len(mock.Errors) == 0 {
+        t.Error("expected at least one error notification for degraded plugin")
+    }
+}
+
+func TestHostStopsPlugins(t *testing.T) {
+    h := plugin.NewHost(&plugin.MockHost{})
+    p := &lifecyclePlugin{stubPlugin: stubPlugin{id: "a"}}
+    h.Register(p)
+    _ = h.StartAll()
+    h.StopAll()
+    if !p.stopped {
+        t.Error("expected Stop to be called")
+    }
+}
+
+func TestHostRuntimePlugins(t *testing.T) {
+    h := plugin.NewHost(&plugin.MockHost{})
+    rt := &stubRuntime{stubPlugin: stubPlugin{id: "rt"}, handles: true}
+    h.Register(rt)
+
+    runtimes := h.RuntimePlugins()
+    if len(runtimes) != 1 {
+        t.Fatalf("expected 1 runtime plugin, got %d", len(runtimes))
+    }
+}
+```
+
+**Step 2: Run to verify failure**
+
+```bash
+go test ./internal/plugin/... -v
+```
+Expected: FAIL — `NewHost`, `StartAll`, `StopAll`, `RuntimePlugins` undefined.
+
+**Step 3: Implement host**
+
+Create `internal/plugin/host.go`:
+```go
+package plugin
+
+import "fmt"
+
+// PluginHost manages plugin registration and lifecycle.
+type PluginHost struct {
+    appHost Host
+    plugins []Plugin
+}
+
+// NewHost creates a PluginHost that uses the provided Host for logging/notifications.
+func NewHost(h Host) *PluginHost {
+    return &PluginHost{appHost: h}
+}
+
+// Register adds a plugin to be managed. Must be called before StartAll.
+func (ph *PluginHost) Register(p Plugin) {
+    ph.plugins = append(ph.plugins, p)
+}
+
+// StartAll inits and starts all registered plugins.
+// A plugin that fails Init or Start is marked degraded — other plugins continue.
+func (ph *PluginHost) StartAll() error {
+    for _, p := range ph.plugins {
+        if err := p.Init(ph.appHost); err != nil {
+            ph.appHost.NotifyError(
+                fmt.Sprintf("Plugin %q failed to initialize", p.Name()),
+                err.Error(),
+            )
+            ph.appHost.Logf("plugin %s: init error: %v", p.ID(), err)
+            continue
+        }
+        if err := p.Start(); err != nil {
+            ph.appHost.NotifyError(
+                fmt.Sprintf("Plugin %q failed to start", p.Name()),
+                err.Error(),
+            )
+            ph.appHost.Logf("plugin %s: start error: %v", p.ID(), err)
+        }
+    }
+    return nil
+}
+
+// StopAll stops all plugins in reverse registration order.
+func (ph *PluginHost) StopAll() {
+    for i := len(ph.plugins) - 1; i >= 0; i-- {
+        if err := ph.plugins[i].Stop(); err != nil {
+            ph.appHost.Logf("plugin %s: stop error: %v", ph.plugins[i].ID(), err)
+        }
+    }
+}
+
+// RuntimePlugins returns all plugins that implement RuntimePlugin.
+func (ph *PluginHost) RuntimePlugins() []RuntimePlugin {
+    var out []RuntimePlugin
+    for _, p := range ph.plugins {
+        if rp, ok := p.(RuntimePlugin); ok {
+            out = append(out, rp)
+        }
+    }
+    return out
+}
+```
+
+**Step 4: Run tests to verify they pass**
+
+```bash
+go test ./internal/plugin/... -v
+```
+Expected: PASS.
+
+**Step 5: Commit**
+
+```bash
+git add internal/plugin/host.go internal/plugin/host_test.go
+git commit -m "feat: implement plugin host lifecycle manager"
+```
+
+---
+
+## Task 5: Caddy Manager
+
+**Files:**
+- Create: `internal/caddy/manager.go`
+- Create: `internal/caddy/manager_test.go`
+
+First, add Caddy as a dependency:
+```bash
+go get github.com/caddyserver/caddy/v2
+```
+
+**Step 1: Write failing tests**
+
+Create `internal/caddy/manager_test.go`:
+```go
+package caddy_test
+
+import (
+    "testing"
+
+    flockCaddy "github.com/andybarilla/flock/internal/caddy"
+    "github.com/andybarilla/flock/internal/registry"
+)
+
+func TestGenerateConfigStaticSite(t *testing.T) {
+    sites := []registry.Site{
+        {Path: "/var/www/html", Domain: "static.test", TLS: false},
+    }
+    cfg := flockCaddy.GenerateConfig(sites, nil)
+    if cfg == nil {
+        t.Fatal("expected non-nil config")
+    }
+    // Config should have one server block
+    httpApp, ok := cfg.AppsRaw["http"]
+    if !ok {
+        t.Fatal("expected http app in config")
+    }
+    if httpApp == nil {
+        t.Fatal("http app config is nil")
+    }
+}
+
+func TestGenerateConfigWithUpstreamResolver(t *testing.T) {
+    sites := []registry.Site{
+        {Path: "/var/www/php", Domain: "php.test", TLS: false},
+    }
+    resolver := func(site registry.Site) string {
+        return "fastcgi://unix//tmp/php.sock"
+    }
+    cfg := flockCaddy.GenerateConfig(sites, resolver)
+    if cfg == nil {
+        t.Fatal("expected non-nil config")
+    }
+}
+```
+
+**Step 2: Run to verify failure**
+
+```bash
+go test ./internal/caddy/... -v
+```
+Expected: FAIL — package does not exist.
+
+**Step 3: Implement Caddy manager**
+
+Create `internal/caddy/manager.go`:
+```go
+package caddy
+
+import (
+    "encoding/json"
+
+    "github.com/andybarilla/flock/internal/registry"
+
+    caddycmd "github.com/caddyserver/caddy/v2"
+)
+
+// UpstreamResolver returns the Caddy upstream string for a site,
+// or "" to fall back to static file serving.
+type UpstreamResolver func(site registry.Site) string
+
+// Manager owns the embedded Caddy instance.
+type Manager struct{}
+
+func New() *Manager { return &Manager{} }
+
+// Apply generates a new config from the current site list and hot-reloads Caddy.
+func (m *Manager) Apply(sites []registry.Site, resolver UpstreamResolver) error {
+    cfg := GenerateConfig(sites, resolver)
+    return caddycmd.Run(cfg)
+}
+
+// Stop shuts down the embedded Caddy instance.
+func (m *Manager) Stop() error {
+    return caddycmd.Stop()
+}
+
+// GenerateConfig builds a caddy.Config for the given sites.
+// If resolver is non-nil, it is called for each site to get a FastCGI/proxy upstream.
+// Sites with no upstream are served as static files.
+func GenerateConfig(sites []registry.Site, resolver UpstreamResolver) *caddycmd.Config {
+    type route struct {
+        Match  []map[string]any `json:"match"`
+        Handle []map[string]any `json:"handle"`
+    }
+    type server struct {
+        Listen []string `json:"listen"`
+        Routes []route  `json:"routes"`
+    }
+    type httpApp struct {
+        Servers map[string]server `json:"servers"`
+    }
+
+    servers := map[string]server{}
+
+    for i, site := range sites {
+        var handler map[string]any
+        if resolver != nil {
+            if upstream := resolver(site); upstream != "" {
+                handler = map[string]any{
+                    "handler": "reverse_proxy",
+                    "upstreams": []map[string]any{
+                        {"dial": upstream},
+                    },
+                }
+            }
+        }
+        if handler == nil {
+            handler = map[string]any{
+                "handler": "file_server",
+                "root":    site.Path,
+            }
+        }
+
+        listen := ":80"
+        if site.TLS {
+            listen = ":443"
+        }
+
+        r := route{
+            Match:  []map[string]any{{"host": []string{site.Domain}}},
+            Handle: []map[string]any{handler},
+        }
+
+        key := fmt.Sprintf("site%d", i)
+        servers[key] = server{
+            Listen: []string{listen},
+            Routes: []route{r},
+        }
+    }
+
+    appRaw, _ := json.Marshal(httpApp{Servers: servers})
+    return &caddycmd.Config{
+        AppsRaw: map[string]json.RawMessage{
+            "http": appRaw,
+        },
+    }
+}
+```
+
+Add missing import `"fmt"` to the file (it's used in `GenerateConfig`). The file above already includes it — if the linter complains, run `goimports`.
+
+**Step 4: Run tests to verify they pass**
+
+```bash
+go test ./internal/caddy/... -v
+```
+Expected: PASS.
+
+**Step 5: Commit**
+
+```bash
+git add internal/caddy/
+go mod tidy
+git add go.mod go.sum
+git commit -m "feat: add Caddy manager with config generation"
+```
+
+---
+
+## Task 6: flock-ssl Plugin
+
+**Files:**
+- Create: `plugins/ssl/plugin.go`
+- Create: `plugins/ssl/plugin_test.go`
+
+**Background:** `flock-ssl` shells out to `mkcert`. Ensure `mkcert` is installed on the test machine. On CI, the test is skipped if mkcert is not found.
+
+**Step 1: Write failing tests**
+
+Create `plugins/ssl/plugin_test.go`:
+```go
+package ssl_test
+
+import (
+    "os"
+    "os/exec"
+    "path/filepath"
+    "testing"
+
+    "github.com/andybarilla/flock/internal/plugin"
+    "github.com/andybarilla/flock/internal/registry"
+    flockssl "github.com/andybarilla/flock/plugins/ssl"
+)
+
+func skipIfNoMkcert(t *testing.T) {
+    t.Helper()
+    if _, err := exec.LookPath("mkcert"); err != nil {
+        t.Skip("mkcert not found, skipping SSL integration test")
+    }
+}
+
+func TestEnsureCertCreatesFiles(t *testing.T) {
+    skipIfNoMkcert(t)
+
+    dir := t.TempDir()
+    p := flockssl.New(dir)
+
+    host := &plugin.MockHost{}
+    if err := p.Init(host); err != nil {
+        t.Fatalf("Init: %v", err)
+    }
+
+    site := registry.Site{Domain: "testapp.test", TLS: true}
+    certFile, keyFile, err := p.EnsureCert(site)
+    if err != nil {
+        t.Fatalf("EnsureCert: %v", err)
+    }
+
+    if _, err := os.Stat(certFile); err != nil {
+        t.Errorf("cert file not found: %v", err)
+    }
+    if _, err := os.Stat(keyFile); err != nil {
+        t.Errorf("key file not found: %v", err)
+    }
+}
+
+func TestCertPathsAreDeterministic(t *testing.T) {
+    dir := t.TempDir()
+    p := flockssl.New(dir)
+    site := registry.Site{Domain: "myapp.test"}
+    cert, key := p.CertPaths(site)
+
+    wantCert := filepath.Join(dir, "myapp.test.pem")
+    wantKey := filepath.Join(dir, "myapp.test-key.pem")
+
+    if cert != wantCert {
+        t.Errorf("cert = %q, want %q", cert, wantCert)
+    }
+    if key != wantKey {
+        t.Errorf("key = %q, want %q", key, wantKey)
+    }
+}
+```
+
+**Step 2: Run to verify failure**
+
+```bash
+go test ./plugins/ssl/... -v
+```
+Expected: FAIL — package does not exist.
+
+**Step 3: Implement SSL plugin**
+
+Create `plugins/ssl/plugin.go`:
+```go
+package ssl
+
+import (
+    "fmt"
+    "os"
+    "os/exec"
+    "path/filepath"
+
+    "github.com/andybarilla/flock/internal/plugin"
+    "github.com/andybarilla/flock/internal/registry"
+)
+
+// Plugin manages local TLS certificates using mkcert.
+type Plugin struct {
+    certsDir string
+    host     plugin.Host
+}
+
+func New(certsDir string) *Plugin {
+    return &Plugin{certsDir: certsDir}
+}
+
+func (p *Plugin) ID() string   { return "flock-ssl" }
+func (p *Plugin) Name() string { return "SSL" }
+
+func (p *Plugin) Init(host plugin.Host) error {
+    p.host = host
+    return os.MkdirAll(p.certsDir, 0o755)
+}
+
+func (p *Plugin) Start() error {
+    // Install the local CA into system trust stores (idempotent).
+    cmd := exec.Command("mkcert", "-install")
+    if out, err := cmd.CombinedOutput(); err != nil {
+        return fmt.Errorf("mkcert -install: %w\n%s", err, out)
+    }
+    return nil
+}
+
+func (p *Plugin) Stop() error { return nil }
+
+// CertPaths returns the expected cert and key file paths for a site.
+func (p *Plugin) CertPaths(site registry.Site) (cert, key string) {
+    cert = filepath.Join(p.certsDir, site.Domain+".pem")
+    key = filepath.Join(p.certsDir, site.Domain+"-key.pem")
+    return
+}
+
+// EnsureCert generates a cert for the site if one does not already exist.
+func (p *Plugin) EnsureCert(site registry.Site) (cert, key string, err error) {
+    cert, key = p.CertPaths(site)
+    if fileExists(cert) && fileExists(key) {
+        return cert, key, nil
+    }
+    cmd := exec.Command("mkcert",
+        "-cert-file", cert,
+        "-key-file", key,
+        site.Domain,
+    )
+    if out, err2 := cmd.CombinedOutput(); err2 != nil {
+        return "", "", fmt.Errorf("mkcert %s: %w\n%s", site.Domain, err2, out)
+    }
+    return cert, key, nil
+}
+
+func fileExists(path string) bool {
+    _, err := os.Stat(path)
+    return err == nil
+}
+```
+
+**Step 4: Run tests to verify they pass**
+
+```bash
+go test ./plugins/ssl/... -v
+```
+Expected: PASS (or SKIP on machines without mkcert).
+
+**Step 5: Commit**
+
+```bash
+git add plugins/ssl/
+git commit -m "feat: add flock-ssl plugin using mkcert"
+```
+
+---
+
+## Task 7: flock-php Plugin
+
+**Files:**
+- Create: `plugins/php/plugin.go`
+- Create: `plugins/php/plugin_test.go`
+- Create: `plugins/php/fpm.go`
+
+**Step 1: Write failing tests**
+
+Create `plugins/php/plugin_test.go`:
+```go
+package php_test
+
+import (
+    "os"
+    "testing"
+
+    "github.com/andybarilla/flock/internal/plugin"
+    "github.com/andybarilla/flock/internal/registry"
+    flockphp "github.com/andybarilla/flock/plugins/php"
+)
+
+func TestHandlesDetectsComposerJson(t *testing.T) {
+    dir := t.TempDir()
+    f, _ := os.Create(dir + "/composer.json")
+    f.Close()
+
+    p := flockphp.New()
+    site := registry.Site{Path: dir, Domain: "app.test"}
+    if !p.Handles(site) {
+        t.Error("expected Handles to return true for directory with composer.json")
+    }
+}
+
+func TestHandlesDetectsPhpVersionFile(t *testing.T) {
+    dir := t.TempDir()
+    os.WriteFile(dir+"/.php-version", []byte("8.3\n"), 0o644)
+
+    p := flockphp.New()
+    site := registry.Site{Path: dir, Domain: "app.test"}
+    if !p.Handles(site) {
+        t.Error("expected Handles to return true for directory with .php-version")
+    }
+}
+
+func TestHandlesReturnsFalseForNonPhp(t *testing.T) {
+    dir := t.TempDir()
+
+    p := flockphp.New()
+    site := registry.Site{Path: dir, Domain: "app.test"}
+    if p.Handles(site) {
+        t.Error("expected Handles to return false for empty directory")
+    }
+}
+
+func TestUpstreamForUsesSocketPath(t *testing.T) {
+    p := flockphp.New()
+    site := registry.Site{Domain: "app.test", PHPVersion: "8.3"}
+    upstream, err := p.UpstreamFor(site)
+    if err != nil {
+        t.Fatalf("UpstreamFor: %v", err)
+    }
+    if upstream == "" {
+        t.Error("expected non-empty upstream")
+    }
+}
+
+func TestVersionFromSiteFallsBackToDefault(t *testing.T) {
+    p := flockphp.New()
+    site := registry.Site{Domain: "app.test"} // no PHPVersion set
+    version := p.VersionForSite(site)
+    if version == "" {
+        t.Error("expected a default PHP version")
+    }
+}
+
+func TestPluginInterface(t *testing.T) {
+    var _ plugin.RuntimePlugin = flockphp.New()
+}
+```
+
+**Step 2: Run to verify failure**
+
+```bash
+go test ./plugins/php/... -v
+```
+Expected: FAIL.
+
+**Step 3: Implement PHP plugin**
+
+Create `plugins/php/plugin.go`:
+```go
+package php
+
+import (
+    "fmt"
+    "os"
+    "path/filepath"
+    "runtime"
+    "strings"
+
+    "github.com/andybarilla/flock/internal/plugin"
+    "github.com/andybarilla/flock/internal/registry"
+)
+
+const defaultVersion = "8.3"
+
+// Plugin manages PHP-FPM pools for registered sites.
+type Plugin struct {
+    host plugin.Host
+    fpm  *fpmManager
+}
+
+func New() *Plugin {
+    return &Plugin{fpm: newFPMManager()}
+}
+
+func (p *Plugin) ID() string   { return "flock-php" }
+func (p *Plugin) Name() string { return "PHP" }
+
+func (p *Plugin) Init(host plugin.Host) error {
+    p.host = host
+    return nil
+}
+
+func (p *Plugin) Start() error  { return nil }
+func (p *Plugin) Stop() error   { return p.fpm.stopAll() }
+
+// Handles returns true if the site directory contains PHP project indicators.
+func (p *Plugin) Handles(site registry.Site) bool {
+    indicators := []string{"composer.json", ".php-version", "index.php"}
+    for _, name := range indicators {
+        if _, err := os.Stat(filepath.Join(site.Path, name)); err == nil {
+            return true
+        }
+    }
+    return false
+}
+
+// UpstreamFor returns the FastCGI upstream string for the site's PHP version.
+func (p *Plugin) UpstreamFor(site registry.Site) (string, error) {
+    version := p.VersionForSite(site)
+    sock, err := p.fpm.ensurePool(version)
+    if err != nil {
+        return "", fmt.Errorf("php fpm pool for %s: %w", version, err)
+    }
+    if runtime.GOOS == "windows" {
+        return fmt.Sprintf("fastcgi://127.0.0.1:%s", sock), nil
+    }
+    return fmt.Sprintf("fastcgi://unix/%s", sock), nil
+}
+
+// VersionForSite returns the PHP version to use for a site.
+// Precedence: site.PHPVersion > .php-version file > default.
+func (p *Plugin) VersionForSite(site registry.Site) string {
+    if site.PHPVersion != "" {
+        return site.PHPVersion
+    }
+    versionFile := filepath.Join(site.Path, ".php-version")
+    if data, err := os.ReadFile(versionFile); err == nil {
+        v := strings.TrimSpace(string(data))
+        if v != "" {
+            return v
+        }
+    }
+    return defaultVersion
+}
+```
+
+Create `plugins/php/fpm.go`:
+```go
+package php
+
+import (
+    "fmt"
+    "os"
+    "os/exec"
+    "path/filepath"
+    "runtime"
+    "sync"
+)
+
+type fpmManager struct {
+    mu    sync.Mutex
+    pools map[string]*fpmPool // keyed by PHP version
+}
+
+type fpmPool struct {
+    version  string
+    sockPath string
+    cmd      *exec.Cmd
+}
+
+func newFPMManager() *fpmManager {
+    return &fpmManager{pools: map[string]*fpmPool{}}
+}
+
+// ensurePool starts an FPM pool for the given version if not already running.
+// Returns the socket path (or TCP port string on Windows).
+func (m *fpmManager) ensurePool(version string) (string, error) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    if pool, ok := m.pools[version]; ok {
+        return pool.sockPath, nil
+    }
+
+    pool, err := startFPMPool(version)
+    if err != nil {
+        return "", err
+    }
+    m.pools[version] = pool
+    return pool.sockPath, nil
+}
+
+func (m *fpmManager) stopAll() error {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    for _, pool := range m.pools {
+        if pool.cmd != nil && pool.cmd.Process != nil {
+            _ = pool.cmd.Process.Kill()
+        }
+    }
+    m.pools = map[string]*fpmPool{}
+    return nil
+}
+
+func startFPMPool(version string) (*fpmPool, error) {
+    // Locate php-fpm binary. Herd-style: check common install paths.
+    binary, err := findPHPFPM(version)
+    if err != nil {
+        return nil, err
+    }
+
+    sockPath := fpmSocketPath(version)
+    if err := os.MkdirAll(filepath.Dir(sockPath), 0o755); err != nil {
+        return nil, fmt.Errorf("create socket dir: %w", err)
+    }
+
+    cmd := exec.Command(binary,
+        "--nodaemonize",
+        "--fpm-config", "/dev/stdin",
+    )
+    cmd.Stdin = strings.NewReader(fpmConfig(version, sockPath))
+
+    if err := cmd.Start(); err != nil {
+        return nil, fmt.Errorf("start php-fpm %s: %w", version, err)
+    }
+
+    return &fpmPool{version: version, sockPath: sockPath, cmd: cmd}, nil
+}
+
+func fpmSocketPath(version string) string {
+    home, _ := os.UserHomeDir()
+    dir := filepath.Join(home, ".local", "share", "flock", "fpm")
+    if runtime.GOOS == "darwin" {
+        dir = filepath.Join(home, "Library", "Application Support", "flock", "fpm")
+    }
+    return filepath.Join(dir, fmt.Sprintf("php%s.sock", version))
+}
+
+func findPHPFPM(version string) (string, error) {
+    candidates := []string{
+        fmt.Sprintf("php-fpm%s", version),
+        fmt.Sprintf("php-fpm"),
+        fmt.Sprintf("/usr/sbin/php-fpm%s", version),
+        fmt.Sprintf("/opt/homebrew/opt/php@%s/sbin/php-fpm", version),
+    }
+    for _, c := range candidates {
+        if path, err := exec.LookPath(c); err == nil {
+            return path, nil
+        }
+    }
+    return "", fmt.Errorf("php-fpm %s not found; install PHP %s", version, version)
+}
+
+func fpmConfig(version, sockPath string) string {
+    return fmt.Sprintf(`[global]
+error_log = /dev/stderr
+
+[www]
+listen = %s
+pm = dynamic
+pm.max_children = 5
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 3
+`, sockPath)
+}
+```
+
+Add `"strings"` import to `fpm.go`.
+
+**Step 4: Run tests to verify they pass**
+
+```bash
+go test ./plugins/php/... -v
+```
+Expected: PASS (FPM start tests are not included in unit tests — they require PHP installed).
+
+**Step 5: Commit**
+
+```bash
+git add plugins/php/
+git commit -m "feat: add flock-php plugin with FPM pool management"
+```
+
+---
+
+## Task 8: Wire Core Together
+
+**Files:**
+- Modify: `app.go`
+- Create: `internal/core/app.go`
+- Create: `internal/core/app_test.go`
+
+**Step 1: Write failing test**
+
+Create `internal/core/app_test.go`:
+```go
+package core_test
+
+import (
+    "testing"
+
+    "github.com/andybarilla/flock/internal/core"
+)
+
+func TestAppStartsAndStops(t *testing.T) {
+    cfg := core.Config{
+        SitesFile: t.TempDir() + "/sites.json",
+        CertsDir:  t.TempDir(),
+        SkipCaddy: true, // don't bind ports in unit tests
+    }
+    app, err := core.New(cfg)
+    if err != nil {
+        t.Fatalf("New: %v", err)
+    }
+    if err := app.Start(); err != nil {
+        t.Fatalf("Start: %v", err)
+    }
+    app.Stop()
+}
+```
+
+**Step 2: Run to verify failure**
+
+```bash
+go test ./internal/core/... -v
+```
+Expected: FAIL.
+
+**Step 3: Implement core app**
+
+Create `internal/core/app.go`:
+```go
+package core
+
+import (
+    "fmt"
+    "log"
+    "os"
+
+    flockCaddy "github.com/andybarilla/flock/internal/caddy"
+    "github.com/andybarilla/flock/internal/plugin"
+    "github.com/andybarilla/flock/internal/registry"
+    flockphp "github.com/andybarilla/flock/plugins/php"
+    flockssl "github.com/andybarilla/flock/plugins/ssl"
+)
+
+// Config holds startup configuration for the core app.
+type Config struct {
+    SitesFile string
+    CertsDir  string
+    SkipCaddy bool // used in tests to avoid binding ports
+}
+
+// App is the central coordinator for Flock.
+type App struct {
+    cfg      Config
+    registry *registry.Registry
+    plugins  *plugin.PluginHost
+    caddy    *flockCaddy.Manager
+    ssl      *flockssl.Plugin
+    php      *flockphp.Plugin
+    logger   *log.Logger
+}
+
+// New creates an App with all first-party plugins registered.
+func New(cfg Config) (*App, error) {
+    logger := log.New(os.Stderr, "[flock] ", log.LstdFlags)
+    hostAdapter := &logHost{logger: logger}
+
+    reg := registry.New(cfg.SitesFile)
+    if err := reg.Load(); err != nil {
+        return nil, fmt.Errorf("load registry: %w", err)
+    }
+
+    sslPlugin := flockssl.New(cfg.CertsDir)
+    phpPlugin := flockphp.New()
+
+    ph := plugin.NewHost(hostAdapter)
+    ph.Register(sslPlugin)
+    ph.Register(phpPlugin)
+
+    return &App{
+        cfg:      cfg,
+        registry: reg,
+        plugins:  ph,
+        caddy:    flockCaddy.New(),
+        ssl:      sslPlugin,
+        php:      phpPlugin,
+        logger:   logger,
+    }, nil
+}
+
+// Start initializes plugins and starts Caddy.
+func (a *App) Start() error {
+    if err := a.plugins.StartAll(); err != nil {
+        return err
+    }
+    if a.cfg.SkipCaddy {
+        return nil
+    }
+    return a.reload()
+}
+
+// Stop shuts down all services.
+func (a *App) Stop() {
+    a.plugins.StopAll()
+    if !a.cfg.SkipCaddy {
+        _ = a.caddy.Stop()
+    }
+}
+
+// AddSite registers a new site, issues its cert, and reloads Caddy.
+func (a *App) AddSite(path, domain string) error {
+    site := registry.Site{
+        Path:   path,
+        Domain: domain,
+        TLS:    true,
+    }
+    if err := a.registry.Add(site); err != nil {
+        return err
+    }
+    if _, _, err := a.ssl.EnsureCert(site); err != nil {
+        a.logger.Printf("ssl cert for %s: %v", domain, err)
+    }
+    return a.reload()
+}
+
+// RemoveSite unregisters a site and reloads Caddy.
+func (a *App) RemoveSite(domain string) error {
+    if err := a.registry.Remove(domain); err != nil {
+        return err
+    }
+    return a.reload()
+}
+
+// Sites returns all registered sites.
+func (a *App) Sites() []registry.Site {
+    return a.registry.List()
+}
+
+func (a *App) reload() error {
+    sites := a.registry.List()
+    resolver := func(site registry.Site) string {
+        for _, rp := range a.plugins.RuntimePlugins() {
+            if rp.Handles(site) {
+                upstream, err := rp.UpstreamFor(site)
+                if err != nil {
+                    a.logger.Printf("upstream for %s: %v", site.Domain, err)
+                    return ""
+                }
+                return upstream
+            }
+        }
+        return ""
+    }
+    return a.caddy.Apply(sites, resolver)
+}
+
+// logHost adapts log.Logger to the plugin.Host interface.
+type logHost struct {
+    logger *log.Logger
+}
+
+func (h *logHost) Logf(format string, args ...any) {
+    h.logger.Printf(format, args...)
+}
+
+func (h *logHost) NotifyError(title, message string) {
+    h.logger.Printf("ERROR [%s]: %s", title, message)
+}
+```
+
+**Step 4: Run tests to verify they pass**
+
+```bash
+go test ./internal/core/... -v
+```
+Expected: PASS.
+
+**Step 5: Commit**
+
+```bash
+git add internal/core/
+git commit -m "feat: wire core app — registry, plugins, and Caddy"
+```
+
+---
+
+## Task 9: Update ROADMAP and README
+
+**Files:**
+- Modify: `docs/ROADMAP.md`
+- Modify: `README.md`
+
+**Step 1: Update ROADMAP**
+
+Replace the Development Phases section of `docs/ROADMAP.md` with:
+
+```markdown
+## Development Phases
+
+### Phase 1: Core (v0.1)
+- [ ] Project scaffold (Go + Wails) — `docs/tasks/001-scaffold.md`
+- [ ] Site registry — `docs/tasks/002-registry.md`
+- [ ] Plugin interfaces + host — `docs/tasks/003-plugin-host.md`
+- [ ] Caddy manager (embedded) — `docs/tasks/004-caddy.md`
+- [ ] flock-ssl plugin (mkcert) — `docs/tasks/005-ssl.md`
+- [ ] flock-php plugin (FPM pools) — `docs/tasks/006-php.md`
+- [ ] Core wiring — `docs/tasks/007-core.md`
+- [ ] Wails GUI: system tray + site list — `docs/tasks/008-gui.md`
+
+### Phase 2: Services (v0.2)
+- [ ] flock-databases: MySQL, PostgreSQL, Redis
+
+### Phase 3: External Plugins (v0.3)
+- [ ] Plugin discovery and loading API
+- [ ] flock-node plugin
+- [ ] Plugin registry / marketplace
+```
+
+**Step 2: Update README**
+
+```markdown
+# Flock
+
+A cross-platform, open-source local development environment manager.
+Inspired by Laravel Herd — with plugin support for any language stack.
+
+**Status:** Early development.
+
+## What it does
+
+- Manages local `.test` domains via an embedded Caddy reverse proxy
+- Issues trusted local TLS certificates with mkcert
+- Manages PHP-FPM pools per PHP version
+- Extensible via plugins (Node, Quarkus, etc.) — coming in v0.3
+
+## Tech stack
+
+Go + Wails | Caddy (embedded) | mkcert | PHP-FPM
+
+## Platforms
+
+macOS · Linux · Windows
+```
+
+**Step 3: Commit**
+
+```bash
+git add docs/ROADMAP.md README.md
+git commit -m "docs: update roadmap phases and README"
+```
+
+---
+
+## Task 10: Wails GUI — System Tray + Site List
+
+**Files:**
+- Modify: `app.go`
+- Modify: `main.go`
+- Create: `frontend/src/App.svelte` (or equivalent vanilla JS)
+
+**Note:** Wails v2 uses a webview frontend. The default template uses vanilla JS/HTML. For a richer UI, swap to the Svelte template: `wails init -n flock -t svelte`.
+
+**Step 1: Expose App methods to frontend**
+
+Modify `app.go` to wrap `internal/core.App`:
+
+```go
+package main
+
+import (
+    "context"
+
+    "github.com/andybarilla/flock/internal/config"
+    "github.com/andybarilla/flock/internal/core"
+    "github.com/andybarilla/flock/internal/registry"
+)
+
+type App struct {
+    ctx  context.Context
+    core *core.App
+}
+
+func NewApp() *App {
+    return &App{}
+}
+
+func (a *App) startup(ctx context.Context) {
+    a.ctx = ctx
+    cfg := core.Config{
+        SitesFile: config.SitesFile(),
+        CertsDir:  config.ConfigDir() + "/certs",
+    }
+    app, err := core.New(cfg)
+    if err != nil {
+        panic(err)
+    }
+    a.core = app
+    _ = a.core.Start()
+}
+
+func (a *App) shutdown(_ context.Context) {
+    if a.core != nil {
+        a.core.Stop()
+    }
+}
+
+// ListSites returns all registered sites for the frontend.
+func (a *App) ListSites() []registry.Site {
+    return a.core.Sites()
+}
+
+// AddSite registers a new site.
+func (a *App) AddSite(path, domain string) error {
+    return a.core.AddSite(path, domain)
+}
+
+// RemoveSite unregisters a site by domain.
+func (a *App) RemoveSite(domain string) error {
+    return a.core.RemoveSite(domain)
+}
+```
+
+**Step 2: Wire shutdown to Wails**
+
+Update `main.go` to pass `OnShutdown`:
+```go
+err := wails.Run(&options.App{
+    Title:     "Flock",
+    Width:     900,
+    Height:    600,
+    OnStartup: app.startup,
+    OnShutdown: app.shutdown,
+    Bind:      []interface{}{app},
+})
+```
+
+**Step 3: Build and verify the app launches**
+
+```bash
+wails dev
+```
+Expected: App window opens without errors. Console shows no panics.
+
+**Step 4: Commit**
+
+```bash
+git add app.go main.go
+git commit -m "feat: wire Wails frontend to core app"
+```

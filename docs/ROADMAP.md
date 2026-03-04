@@ -45,7 +45,7 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 - [x] flock-ssl plugin (mkcert) — See: docs/tasks/005-flock-ssl.md
 - [x] flock-php plugin (FPM pools) — See: docs/tasks/006-flock-php.md
 - [x] Core wiring — See: docs/tasks/007-core-wiring.md
-- [ ] GUI: system tray + site list
+- [x] GUI: system tray + site list — See: docs/tasks/008-gui-site-list.md
 
 ### Phase 2 — Services
 

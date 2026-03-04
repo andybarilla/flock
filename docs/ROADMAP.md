@@ -54,7 +54,16 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 ### Phase 3 — External Plugins
 
 - [x] Plugin discovery and loading API — See: docs/tasks/010-plugin-discovery.md
-- [ ] flock-node plugin
+- [x] flock-node plugin — See: docs/tasks/011-flock-node.md
+
+### Phase 4 — UI/UX Polish
+
+- [x] Integrate DaisyUI + Tailwind CSS (framework-agnostic component classes + dark theme) — See: docs/plans/2026-03-04-daisyui-integration-design.md
+- [x] Error UX (dismissable banners, friendly messages, loading states) — See: docs/plans/2026-03-04-error-ux-design.md
+- [ ] Add Site form improvements (collapsible form, better layout, confirmation on remove)
+- [ ] Site table: show Node Version column
+- [ ] Empty state improvements (actionable guidance for sites and services)
+- [ ] Accessibility (color contrast, keyboard shortcuts)
 
 ### Future — Potential
 

@@ -18,8 +18,8 @@
     }
   }
 
-  async function handleAdd(path, domain, phpVersion, tls) {
-    await AddSite(path, domain, phpVersion, tls);
+  async function handleAdd(path, domain, phpVersion, nodeVersion, tls) {
+    await AddSite(path, domain, phpVersion, nodeVersion, tls);
     await refreshSites();
   }
 

@@ -69,12 +69,13 @@ func (a *App) ListSites() []registry.Site {
 }
 
 // AddSite registers a new site
-func (a *App) AddSite(path, domain, phpVersion string, tls bool) error {
+func (a *App) AddSite(path, domain, phpVersion, nodeVersion string, tls bool) error {
 	return a.core.AddSite(registry.Site{
-		Path:       path,
-		Domain:     domain,
-		PHPVersion: phpVersion,
-		TLS:        tls,
+		Path:        path,
+		Domain:      domain,
+		PHPVersion:  phpVersion,
+		NodeVersion: nodeVersion,
+		TLS:         tls,
 	})
 }
 

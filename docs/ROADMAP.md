@@ -58,7 +58,7 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 
 ### Phase 4 — UI/UX Polish
 
-- [ ] Integrate DaisyUI + Tailwind CSS (framework-agnostic component classes + dark theme)
+- [x] Integrate DaisyUI + Tailwind CSS (framework-agnostic component classes + dark theme) — See: docs/plans/2026-03-04-daisyui-integration-design.md
 - [ ] Error UX (dismissable banners, friendly messages, loading states)
 - [ ] Add Site form improvements (collapsible form, better layout, confirmation on remove)
 - [ ] Site table: show Node Version column

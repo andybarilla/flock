@@ -33,67 +33,19 @@
   onMount(refreshSites);
 </script>
 
-<main>
-  <header>
-    <h1>Flock</h1>
-    <p class="subtitle">Local Development Environment</p>
+<main class="max-w-3xl mx-auto px-6 py-8 text-left">
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold m-0">Flock</h1>
+    <p class="text-base-content/50 mt-1 text-sm">Local Development Environment</p>
   </header>
 
   {#if error}
-    <p class="global-error">{error}</p>
+    <div class="alert alert-error mb-4 text-sm">{error}</div>
   {/if}
 
-  <section class="content">
-    <h2>Sites</h2>
+  <section class="card bg-base-200 p-6">
+    <h2 class="text-sm text-base-content/60 uppercase tracking-wide mb-4 font-semibold">Sites</h2>
     <SiteList {sites} onRemove={handleRemove} />
     <AddSiteForm onAdd={handleAdd} />
   </section>
 </main>
-
-<style>
-  main {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-    text-align: left;
-  }
-
-  header {
-    margin-bottom: 2rem;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.5rem;
-  }
-
-  .subtitle {
-    color: #888;
-    margin: 0.25rem 0 0;
-    font-size: 0.85rem;
-  }
-
-  h2 {
-    font-size: 1rem;
-    color: #aaa;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin: 0 0 1rem;
-  }
-
-  .global-error {
-    background: rgba(231, 76, 60, 0.15);
-    border: 1px solid #e74c3c;
-    border-radius: 4px;
-    padding: 0.5rem 0.75rem;
-    color: #e74c3c;
-    font-size: 0.85rem;
-    margin-bottom: 1rem;
-  }
-
-  .content {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    padding: 1.5rem;
-  }
-</style>

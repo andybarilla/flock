@@ -2,16 +2,16 @@
 
 ## Progress Summary
 
-**Status**: Not Started
+**Status**: Complete
 
-- [ ] Step 1: PluginsDir helper
-- [ ] Step 2: Discovery package (PluginManifest & Scan)
-- [ ] Step 3: JSON-RPC 2.0 client
-- [ ] Step 4: ExternalPlugin adapter
-- [ ] Step 5: Real process starter (os/exec)
-- [ ] Step 6: Core integration
-- [ ] Step 7: Integration test with real plugin executable
-- [ ] Step 8: Final verification & cleanup
+- [x] Step 1: PluginsDir helper
+- [x] Step 2: Discovery package (PluginManifest & Scan)
+- [x] Step 3: JSON-RPC 2.0 client
+- [x] Step 4: ExternalPlugin adapter
+- [x] Step 5: Real process starter (os/exec)
+- [x] Step 6: Core integration
+- [x] Step 7: Integration test with real plugin executable
+- [x] Step 8: Final verification & cleanup
 
 ## Overview
 
@@ -32,6 +32,43 @@ Enable Flock to discover and load external plugins at startup. External plugins 
 - Full lifecycle support: init, start, stop, upstream resolution, service management
 - Integration test with a real plugin subprocess
 - ~20 unit tests passing
+
+## Summary of Changes
+
+### Step 1: PluginsDir Helper
+- Added `PluginsDir()` to `internal/config/paths.go` returning `ConfigDir()/plugins`
+- Added `TestPluginsDir` to `internal/config/paths_test.go`
+
+### Step 2: Discovery Package
+- Created `internal/discovery/discovery.go` with `PluginManifest` type, `Scan()`, `loadManifest()`, `validate()`
+- Created `internal/discovery/discovery_test.go` with 7 tests covering empty dir, nonexistent dir, valid plugin, missing manifest, missing executable, missing fields, multiple plugins
+
+### Step 3: JSON-RPC 2.0 Client
+- Created `internal/external/jsonrpc.go` with `rpcRequest`, `rpcResponse`, `rpcError`, `rpcClient`, `Call()`
+- Created `internal/external/jsonrpc_test.go` with 3 tests: successful call, error response, nil result
+
+### Step 4: ExternalPlugin Adapter
+- Created `internal/external/plugin.go` with `Process` interface, `ProcessStarter` type, `ExternalPlugin` struct implementing Plugin/RuntimePlugin/ServicePlugin
+- Created `internal/external/plugin_test.go` with 6 tests: ID/Name, Init/Start/Stop lifecycle, Handles, UpstreamFor, ServiceStatus, Init error
+
+### Step 5: Real Process Starter
+- Created `internal/external/process.go` with `execProcess` struct and `ExecProcessStarter` function using `os/exec`
+- Created `internal/external/process_test.go` with 1 test using a shell script subprocess
+
+### Step 6: Core Integration
+- Added `PluginsDir` field to `core.Config`
+- Added `discovery.Scan()` and `external.NewPlugin()` registration in `NewCore()`
+- Updated `app.go` to pass `config.PluginsDir()` to core config
+- Added `TestExternalPluginsRegistered` to core tests
+
+### Step 7: Integration Test
+- Created `internal/external/testdata/echo-plugin.go` — minimal JSON-RPC plugin fixture
+- Added `TestExternalPluginIntegration` covering full lifecycle with real subprocess
+
+### Step 8: Final Verification
+- All tests pass (`go test ./...`)
+- No vet issues (`go vet ./...`)
+- Roadmap updated
 
 ## Implementation Steps
 
@@ -104,21 +141,21 @@ Run full test suite, go vet, update roadmap.
 
 ### Functional Requirements
 
-- [ ] External plugins discovered from `~/.config/flock/plugins/` at startup
-- [ ] `plugin.json` manifest validated (id, name, version, executable, capabilities)
-- [ ] Invalid plugins logged and skipped (non-fatal)
-- [ ] External plugins support RuntimePlugin (handles, upstreamFor)
-- [ ] External plugins support ServicePlugin (serviceStatus, startService, stopService)
-- [ ] External plugins appear in Manager.Plugins() alongside built-ins
-- [ ] Built-in plugins have priority for upstream resolution
+- [x] External plugins discovered from `~/.config/flock/plugins/` at startup
+- [x] `plugin.json` manifest validated (id, name, version, executable, capabilities)
+- [x] Invalid plugins logged and skipped (non-fatal)
+- [x] External plugins support RuntimePlugin (handles, upstreamFor)
+- [x] External plugins support ServicePlugin (serviceStatus, startService, stopService)
+- [x] External plugins appear in Manager.Plugins() alongside built-ins
+- [x] Built-in plugins have priority for upstream resolution
 
 ### Technical Requirements
 
-- [ ] All tests pass (TDD — tests written before implementation)
-- [ ] No breaking changes to existing functionality
-- [ ] `go test ./...` passes clean
-- [ ] `go vet ./...` passes clean
-- [ ] No new external dependencies (stdlib only)
+- [x] All tests pass (TDD — tests written before implementation)
+- [x] No breaking changes to existing functionality
+- [x] `go test ./...` passes clean
+- [x] `go vet ./...` passes clean
+- [x] No new external dependencies (stdlib only)
 
 ## Files Involved
 

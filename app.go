@@ -9,6 +9,7 @@ import (
 	"github.com/andybarilla/flock/internal/config"
 	"github.com/andybarilla/flock/internal/core"
 	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/flock/internal/node"
 	"github.com/andybarilla/flock/internal/registry"
 )
 
@@ -43,6 +44,7 @@ func (a *App) startup(ctx context.Context) {
 		FPMRunner:    &loggingFPMRunner{logger: logger},
 		CertStore:    &loggingCertStore{logger: logger, certsDir: filepath.Join(config.DataDir(), "certs")},
 		DBRunner:     databases.NewProcessRunner(),
+		NodeRunner:   node.NewProcessRunner(),
 		DBConfigPath: filepath.Join(config.ConfigDir(), "databases.json"),
 		DBDataRoot:   filepath.Join(config.DataDir(), "databases"),
 		PluginsDir:   config.PluginsDir(),
@@ -67,12 +69,13 @@ func (a *App) ListSites() []registry.Site {
 }
 
 // AddSite registers a new site
-func (a *App) AddSite(path, domain, phpVersion string, tls bool) error {
+func (a *App) AddSite(path, domain, phpVersion, nodeVersion string, tls bool) error {
 	return a.core.AddSite(registry.Site{
-		Path:       path,
-		Domain:     domain,
-		PHPVersion: phpVersion,
-		TLS:        tls,
+		Path:        path,
+		Domain:      domain,
+		PHPVersion:  phpVersion,
+		NodeVersion: nodeVersion,
+		TLS:         tls,
 	})
 }
 

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -224,5 +226,59 @@ func TestExternalPluginInitError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "init failed") {
 		t.Errorf("error = %q, want contains 'init failed'", err.Error())
+	}
+}
+
+func TestExternalPluginIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	// Build the test plugin
+	dir := t.TempDir()
+	exePath := filepath.Join(dir, "echo-plugin")
+	cmd := exec.Command("go", "build", "-o", exePath, "./testdata/echo-plugin.go")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("build test plugin: %v\n%s", err, out)
+	}
+
+	manifest := discovery.PluginManifest{
+		ID:           "echo-plugin",
+		Name:         "Echo Plugin",
+		Version:      "0.1.0",
+		Capabilities: []string{"runtime", "service"},
+		ExePath:      exePath,
+	}
+	p := NewPlugin(manifest, ExecProcessStarter)
+
+	host := &mockHost{sites: []registry.Site{{Domain: "test.test", TLS: true}}}
+
+	// Full lifecycle
+	if err := p.Init(host); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := p.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	if !p.Handles(registry.Site{Domain: "test.test"}) {
+		t.Error("expected Handles() = true")
+	}
+
+	upstream, err := p.UpstreamFor(registry.Site{Domain: "test.test"})
+	if err != nil {
+		t.Fatalf("UpstreamFor: %v", err)
+	}
+	if upstream != "localhost:3000" {
+		t.Errorf("upstream = %q, want localhost:3000", upstream)
+	}
+
+	status := p.ServiceStatus()
+	if status != plugin.ServiceRunning {
+		t.Errorf("ServiceStatus = %v, want ServiceRunning", status)
+	}
+
+	if err := p.Stop(); err != nil {
+		t.Fatalf("Stop: %v", err)
 	}
 }

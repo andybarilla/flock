@@ -38,8 +38,8 @@ A cross-platform, open-source local development environment manager. Inspired by
 
 Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 
-- [ ] Project scaffold (Go + Wails + CI) — See: docs/tasks/001-scaffold.md
-- [ ] Site registry
+- [x] Project scaffold (Go + Wails + CI) — See: docs/tasks/001-scaffold.md
+- [x] Site registry — See: docs/tasks/002-site-registry.md
 - [ ] Plugin interfaces + host
 - [ ] Caddy manager (embedded)
 - [ ] flock-ssl plugin (mkcert)

@@ -51,6 +51,13 @@ describe('SiteList', () => {
     expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
   });
 
+  it('shows empty message when no sites', () => {
+    const { getByText } = render(SiteList, {
+      props: { sites: [], loaded: true, onRemove: vi.fn() },
+    });
+    expect(getByText(/No sites registered/)).toBeTruthy();
+  });
+
   it('shows Node column header', () => {
     const { container } = render(SiteList, {
       props: { sites: fakeSites, loaded: true, onRemove: vi.fn() },
@@ -69,12 +76,5 @@ describe('SiteList', () => {
     expect(rows[0].textContent).toContain('20');
     // Second site has empty node_version, should show dash
     expect(rows[1].cells[3].textContent).toBe('—');
-  });
-
-  it('shows empty message when no sites', () => {
-    const { getByText } = render(SiteList, {
-      props: { sites: [], loaded: true, onRemove: vi.fn() },
-    });
-    expect(getByText(/No sites registered/)).toBeTruthy();
   });
 });

@@ -22,6 +22,7 @@
         <th>Domain</th>
         <th>Path</th>
         <th>PHP</th>
+        <th>Node</th>
         <th>TLS</th>
         <th></th>
       </tr>
@@ -31,6 +32,7 @@
         <tr>
           <td><div class="skeleton h-4 w-28"></div></td>
           <td><div class="skeleton h-4 w-40"></div></td>
+          <td><div class="skeleton h-4 w-10"></div></td>
           <td><div class="skeleton h-4 w-10"></div></td>
           <td><div class="skeleton h-4 w-6"></div></td>
           <td><div class="skeleton h-4 w-16"></div></td>
@@ -47,6 +49,7 @@
         <th>Domain</th>
         <th>Path</th>
         <th>PHP</th>
+        <th>Node</th>
         <th>TLS</th>
         <th></th>
       </tr>
@@ -57,6 +60,7 @@
           <td class="font-semibold">{site.domain}</td>
           <td class="text-base-content/60 text-sm">{site.path}</td>
           <td>{site.php_version || '—'}</td>
+          <td>{site.node_version || '—'}</td>
           <td>{site.tls ? '✓' : '—'}</td>
           <td>
             <button

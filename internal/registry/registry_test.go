@@ -196,6 +196,26 @@ func TestOnChange(t *testing.T) {
 	}
 }
 
+func TestNodeVersionPersistence(t *testing.T) {
+	dir := realDir(t)
+	path := tempFile(t)
+
+	r1 := registry.New(path)
+	_ = r1.Add(registry.Site{Path: dir, Domain: "nodeapp.test", NodeVersion: "system"})
+
+	r2 := registry.New(path)
+	if err := r2.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	sites := r2.List()
+	if len(sites) != 1 {
+		t.Fatalf("expected 1 site, got %d", len(sites))
+	}
+	if sites[0].NodeVersion != "system" {
+		t.Errorf("NodeVersion = %q, want %q", sites[0].NodeVersion, "system")
+	}
+}
+
 func TestInferDomain(t *testing.T) {
 	cases := []struct {
 		path   string

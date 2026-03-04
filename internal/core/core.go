@@ -8,6 +8,7 @@ import (
 	"github.com/andybarilla/flock/internal/databases"
 	"github.com/andybarilla/flock/internal/discovery"
 	"github.com/andybarilla/flock/internal/external"
+	"github.com/andybarilla/flock/internal/node"
 	"github.com/andybarilla/flock/internal/php"
 	"github.com/andybarilla/flock/internal/plugin"
 	"github.com/andybarilla/flock/internal/registry"
@@ -23,6 +24,7 @@ type Config struct {
 	DBRunner     databases.DBRunner
 	DBConfigPath string
 	DBDataRoot   string
+	NodeRunner   node.NodeRunner
 	PluginsDir   string
 }
 
@@ -31,9 +33,10 @@ type Core struct {
 	pluginMgr *plugin.Manager
 	caddyMgr  *caddy.Manager
 	sslPlugin *ssl.Plugin
-	phpPlugin *php.Plugin
-	dbPlugin  *databases.Plugin
-	logger    *log.Logger
+	phpPlugin  *php.Plugin
+	nodePlugin *node.Plugin
+	dbPlugin   *databases.Plugin
+	logger     *log.Logger
 }
 
 func NewCore(cfg Config) *Core {
@@ -42,9 +45,11 @@ func NewCore(cfg Config) *Core {
 
 	sslPlugin := ssl.NewPlugin(cfg.CertStore)
 	phpPlugin := php.NewPlugin(cfg.FPMRunner)
+	nodePlugin := node.NewPlugin(cfg.NodeRunner)
 	dbPlugin := databases.NewPlugin(cfg.DBRunner, cfg.DBConfigPath, cfg.DBDataRoot)
 	pluginMgr.Register(sslPlugin)
 	pluginMgr.Register(phpPlugin)
+	pluginMgr.Register(nodePlugin)
 	pluginMgr.Register(dbPlugin)
 
 	manifests, scanErrs := discovery.Scan(cfg.PluginsDir)
@@ -63,8 +68,9 @@ func NewCore(cfg Config) *Core {
 		pluginMgr: pluginMgr,
 		caddyMgr:  caddyMgr,
 		sslPlugin: sslPlugin,
-		phpPlugin: phpPlugin,
-		dbPlugin:  dbPlugin,
+		phpPlugin:  phpPlugin,
+		nodePlugin: nodePlugin,
+		dbPlugin:   dbPlugin,
 		logger:    cfg.Logger,
 	}
 

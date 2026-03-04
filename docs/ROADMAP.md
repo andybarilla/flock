@@ -53,5 +53,9 @@ Architecture design: `docs/plans/2026-03-03-flock-core-design.md`
 
 ### Phase 3 — External Plugins
 
-- [ ] Plugin discovery and loading API
+- [x] Plugin discovery and loading API — See: docs/tasks/010-plugin-discovery.md
 - [ ] flock-node plugin
+
+### Future — Potential
+
+- [ ] flock-sdk (Go library for plugin authors — handles JSON-RPC boilerplate)

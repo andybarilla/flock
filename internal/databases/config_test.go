@@ -23,8 +23,9 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.MySQL.Autostart {
 		t.Error("MySQL autostart should default to false")
 	}
-	if cfg.MySQL.DataDir != "/data/mysql" {
-		t.Errorf("MySQL DataDir = %q, want /data/mysql", cfg.MySQL.DataDir)
+	wantDataDir := filepath.Join("/data", "mysql")
+	if cfg.MySQL.DataDir != wantDataDir {
+		t.Errorf("MySQL DataDir = %q, want %q", cfg.MySQL.DataDir, wantDataDir)
 	}
 }
 

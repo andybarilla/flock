@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 // BinaryFor returns the primary binary name for a service type.
@@ -57,15 +56,15 @@ func (r *ProcessRunner) Start(svc ServiceType, cfg ServiceConfig) error {
 }
 
 func (r *ProcessRunner) Stop(svc ServiceType) error {
-	switch svc {
-	case MySQL:
-		return r.stopWithSignal(svc)
-	case Postgres:
-		return r.stopWithSignal(svc)
-	case Redis:
-		return r.stopWithSignal(svc)
+	p, ok := r.procs[svc]
+	if !ok {
+		return nil
 	}
-	return fmt.Errorf("unknown service type: %s", svc)
+	if err := stopProcess(p); err != nil {
+		return fmt.Errorf("stop %s: %w", svc, err)
+	}
+	delete(r.procs, svc)
+	return nil
 }
 
 func (r *ProcessRunner) Status(svc ServiceType) ServiceStatus {
@@ -73,24 +72,11 @@ func (r *ProcessRunner) Status(svc ServiceType) ServiceStatus {
 	if !ok {
 		return StatusStopped
 	}
-	if err := p.Signal(syscall.Signal(0)); err != nil {
+	if !isProcessAlive(p) {
 		delete(r.procs, svc)
 		return StatusStopped
 	}
 	return StatusRunning
-}
-
-func (r *ProcessRunner) stopWithSignal(svc ServiceType) error {
-	p, ok := r.procs[svc]
-	if !ok {
-		return nil
-	}
-	if err := p.Signal(syscall.SIGTERM); err != nil {
-		return fmt.Errorf("stop %s: %w", svc, err)
-	}
-	_, _ = p.Wait()
-	delete(r.procs, svc)
-	return nil
 }
 
 // --- MySQL ---
@@ -110,7 +96,7 @@ func (r *ProcessRunner) startMySQL(cfg ServiceConfig) error {
 		"--socket="+cfg.DataDir+"/mysql.sock",
 		"--pid-file="+cfg.DataDir+"/mysql.pid",
 	)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setSysProcAttr(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start mysqld: %w", err)
 	}

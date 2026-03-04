@@ -1,16 +1,58 @@
 <script>
   export let services = [];
+  export let loaded = true;
   export let onStart = () => {};
   export let onStop = () => {};
+
+  let loadingService = null;
 
   const displayName = {
     mysql: 'MySQL',
     postgres: 'PostgreSQL',
     redis: 'Redis',
   };
+
+  async function handleStart(svc) {
+    loadingService = svc;
+    try {
+      await onStart(svc);
+    } finally {
+      loadingService = null;
+    }
+  }
+
+  async function handleStop(svc) {
+    loadingService = svc;
+    try {
+      await onStop(svc);
+    } finally {
+      loadingService = null;
+    }
+  }
 </script>
 
-{#if services.length === 0}
+{#if !loaded}
+  <table class="table table-zebra">
+    <thead>
+      <tr>
+        <th>Service</th>
+        <th>Port</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each Array(3) as _}
+        <tr>
+          <td><div class="skeleton h-4 w-24"></div></td>
+          <td><div class="skeleton h-4 w-12"></div></td>
+          <td><div class="skeleton h-4 w-16"></div></td>
+          <td><div class="skeleton h-4 w-14"></div></td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+{:else if services.length === 0}
   <p class="text-base-content/50 py-8">No database services configured.</p>
 {:else}
   <table class="table table-zebra">
@@ -39,12 +81,28 @@
           <td>
             {#if svc.enabled}
               {#if svc.running}
-                <button class="btn btn-ghost btn-sm hover:btn-error" on:click={() => onStop(svc.type)}>
-                  Stop
+                <button
+                  class="btn btn-ghost btn-sm hover:btn-error"
+                  disabled={loadingService === svc.type}
+                  on:click={() => handleStop(svc.type)}
+                >
+                  {#if loadingService === svc.type}
+                    <span class="loading loading-spinner loading-xs"></span>
+                  {:else}
+                    Stop
+                  {/if}
                 </button>
               {:else}
-                <button class="btn btn-ghost btn-sm hover:btn-success" on:click={() => onStart(svc.type)}>
-                  Start
+                <button
+                  class="btn btn-ghost btn-sm hover:btn-success"
+                  disabled={loadingService === svc.type}
+                  on:click={() => handleStart(svc.type)}
+                >
+                  {#if loadingService === svc.type}
+                    <span class="loading loading-spinner loading-xs"></span>
+                  {:else}
+                    Start
+                  {/if}
                 </button>
               {/if}
             {/if}

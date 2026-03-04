@@ -10,6 +10,7 @@ import (
 type appEntry struct {
 	cmd  *exec.Cmd
 	port int
+	done chan struct{}
 }
 
 type ProcessRunner struct {
@@ -37,11 +38,13 @@ func (r *ProcessRunner) StartApp(siteDir string, port int) error {
 		return fmt.Errorf("start npm in %s: %w", siteDir, err)
 	}
 
-	r.apps[siteDir] = &appEntry{cmd: cmd, port: port}
+	done := make(chan struct{})
+	r.apps[siteDir] = &appEntry{cmd: cmd, port: port, done: done}
 
 	// Goroutine to clean up when process exits
 	go func() {
 		cmd.Wait()
+		close(done)
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		if entry, ok := r.apps[siteDir]; ok && entry.cmd == cmd {
@@ -54,19 +57,20 @@ func (r *ProcessRunner) StartApp(siteDir string, port int) error {
 
 func (r *ProcessRunner) StopApp(siteDir string) error {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	entry, ok := r.apps[siteDir]
 	if !ok {
+		r.mu.Unlock()
 		return fmt.Errorf("no running app at %s", siteDir)
 	}
-
-	if err := entry.cmd.Process.Signal(os.Interrupt); err != nil {
-		// If interrupt fails, force kill
-		entry.cmd.Process.Kill()
-	}
-
 	delete(r.apps, siteDir)
+	r.mu.Unlock()
+
+	// Kill the process. Use Kill directly for cross-platform support
+	// (os.Interrupt is not supported on Windows).
+	entry.cmd.Process.Kill()
+
+	// Wait for the process to fully exit so all file handles are released.
+	<-entry.done
 	return nil
 }
 

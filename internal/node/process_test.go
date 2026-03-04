@@ -50,9 +50,6 @@ server.listen(port, '127.0.0.1');
 		t.Fatalf("StopApp: %v", err)
 	}
 
-	// Give the process a moment to stop
-	time.Sleep(200 * time.Millisecond)
-
 	if runner.IsRunning(dir) {
 		t.Error("expected app to be stopped")
 	}

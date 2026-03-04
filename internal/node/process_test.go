@@ -10,8 +10,21 @@ import (
 )
 
 func TestProcessRunnerStartAndStop(t *testing.T) {
-	// Create a temp dir with a package.json that runs a simple HTTP server
-	dir := t.TempDir()
+	// Create a temp dir manually so we can clean up with retries on Windows,
+	// where child processes may hold file locks briefly after the parent exits.
+	dir, err := os.MkdirTemp("", "TestProcessRunnerStartAndStop")
+	if err != nil {
+		t.Fatalf("MkdirTemp: %v", err)
+	}
+	t.Cleanup(func() {
+		for range 10 {
+			if err := os.RemoveAll(dir); err == nil {
+				return
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+		os.RemoveAll(dir)
+	})
 	packageJSON := `{"name":"test","scripts":{"start":"node server.js"}}`
 	os.WriteFile(filepath.Join(dir, "package.json"), []byte(packageJSON), 0o644)
 
@@ -30,8 +43,7 @@ server.listen(port, '127.0.0.1');
 	runner := node.NewProcessRunner()
 	port := 13100 // use high port to avoid conflicts
 
-	err := runner.StartApp(dir, port)
-	if err != nil {
+	if err := runner.StartApp(dir, port); err != nil {
 		t.Fatalf("StartApp: %v", err)
 	}
 

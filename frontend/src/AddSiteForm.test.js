@@ -7,7 +7,6 @@ describe('AddSiteForm', () => {
     const { container } = render(AddSiteForm);
     const collapse = container.querySelector('.collapse');
     expect(collapse).toBeTruthy();
-    // The checkbox controlling collapse should be unchecked
     const checkbox = collapse.querySelector('input[type="checkbox"]');
     expect(checkbox.checked).toBe(false);
   });
@@ -19,32 +18,46 @@ describe('AddSiteForm', () => {
     expect(checkbox.checked).toBe(true);
   });
 
-  it('has 3 logical rows: Path+Domain, PHP+Node, TLS+Submit', () => {
+  it('has a required section with Path and Domain fields', () => {
     const { container } = render(AddSiteForm);
-    const rows = container.querySelectorAll('.collapse-content .form-row');
-    expect(rows.length).toBe(3);
+    const requiredSection = container.querySelector('[data-section="required"]');
+    expect(requiredSection).toBeTruthy();
+    expect(requiredSection.textContent).toContain('Path');
+    expect(requiredSection.textContent).toContain('Domain');
   });
 
-  it('row 1 contains Path and Domain fields', () => {
+  it('required fields use input-md for visual prominence', () => {
     const { container } = render(AddSiteForm);
-    const row1 = container.querySelectorAll('.collapse-content .form-row')[0];
-    expect(row1.textContent).toContain('Path');
-    expect(row1.textContent).toContain('Domain');
+    const requiredSection = container.querySelector('[data-section="required"]');
+    const inputs = requiredSection.querySelectorAll('input[type="text"]');
+    inputs.forEach((input) => {
+      expect(input.classList.contains('input-md')).toBe(true);
+    });
   });
 
-  it('row 2 contains PHP Version and Node Version fields', () => {
+  it('has a divider separating required and optional sections', () => {
     const { container } = render(AddSiteForm);
-    const row2 = container.querySelectorAll('.collapse-content .form-row')[1];
-    expect(row2.textContent).toContain('PHP Version');
-    expect(row2.textContent).toContain('Node Version');
+    const divider = container.querySelector('.divider');
+    expect(divider).toBeTruthy();
+    expect(divider.textContent).toContain('Options');
   });
 
-  it('row 3 contains TLS checkbox and Add Site button', () => {
+  it('has an optional section with PHP, Node, TLS', () => {
     const { container } = render(AddSiteForm);
-    const row3 = container.querySelectorAll('.collapse-content .form-row')[2];
-    expect(row3.querySelector('input[type="checkbox"]')).toBeTruthy();
-    expect(row3.textContent).toContain('TLS');
-    expect(row3.textContent).toContain('Add Site');
+    const optionalSection = container.querySelector('[data-section="optional"]');
+    expect(optionalSection).toBeTruthy();
+    expect(optionalSection.textContent).toContain('PHP Version');
+    expect(optionalSection.textContent).toContain('Node Version');
+    expect(optionalSection.textContent).toContain('TLS');
+  });
+
+  it('optional fields use input-sm to de-emphasize', () => {
+    const { container } = render(AddSiteForm);
+    const optionalSection = container.querySelector('[data-section="optional"]');
+    const inputs = optionalSection.querySelectorAll('input[type="text"]');
+    inputs.forEach((input) => {
+      expect(input.classList.contains('input-sm')).toBe(true);
+    });
   });
 
   it('auto-collapses after successful submission', async () => {
@@ -52,19 +65,15 @@ describe('AddSiteForm', () => {
     const { container, getByPlaceholderText } = render(AddSiteForm, {
       props: { onAdd },
     });
-    // Expand the form
     const checkbox = container.querySelector('.collapse input[type="checkbox"]');
     await fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
-    // Fill required fields
     const pathInput = getByPlaceholderText('/home/user/projects/myapp');
     const domainInput = getByPlaceholderText('myapp.test');
     await fireEvent.input(pathInput, { target: { value: '/tmp/app' } });
     await fireEvent.input(domainInput, { target: { value: 'app.test' } });
-    // Submit
     const form = container.querySelector('form');
     await fireEvent.submit(form);
-    // Wait for async handler
     await vi.waitFor(() => {
       expect(checkbox.checked).toBe(false);
     });

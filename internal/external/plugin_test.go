@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -236,7 +237,11 @@ func TestExternalPluginIntegration(t *testing.T) {
 
 	// Build the test plugin
 	dir := t.TempDir()
-	exePath := filepath.Join(dir, "echo-plugin")
+	exeName := "echo-plugin"
+	if runtime.GOOS == "windows" {
+		exeName += ".exe"
+	}
+	exePath := filepath.Join(dir, exeName)
 	cmd := exec.Command("go", "build", "-o", exePath, "./testdata/echo-plugin.go")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("build test plugin: %v\n%s", err, out)

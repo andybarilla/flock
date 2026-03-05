@@ -78,17 +78,17 @@
 <main class="max-w-3xl mx-auto px-6 py-8 text-left">
   <header class="mb-8">
     <h1 class="text-2xl font-bold m-0">Flock</h1>
-    <p class="text-base-content/50 mt-1 text-sm">Local Development Environment</p>
+    <p class="text-base-content/70 mt-1 text-sm">Local Development Environment</p>
   </header>
 
   <section class="card bg-base-200 p-6">
-    <h2 class="text-sm text-base-content/60 uppercase tracking-wide mb-4 font-semibold">Sites</h2>
+    <h2 class="text-sm text-base-content/70 uppercase tracking-wide mb-4 font-semibold">Sites</h2>
     <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} on:addsite={() => { addFormOpen = true; }} />
     <AddSiteForm onAdd={handleAdd} bind:collapseOpen={addFormOpen} />
   </section>
 
   <section class="card bg-base-200 p-6 mt-6">
-    <h2 class="text-sm text-base-content/60 uppercase tracking-wide mb-4 font-semibold">Services</h2>
+    <h2 class="text-sm text-base-content/70 uppercase tracking-wide mb-4 font-semibold">Services</h2>
     <ServiceList {services} loaded={servicesLoaded} onStart={handleStartService} onStop={handleStopService} />
   </section>
 </main>

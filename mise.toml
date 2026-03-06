@@ -2,5 +2,12 @@
 go = "1.24"
 node = "lts"
 
-[hooks.enter]
-shell = ["sh", "-c", "git config core.hooksPath .githooks"]
+[tasks.pre-commit]
+description = "Format staged Go files with gofmt -s"
+run = """
+#!/bin/sh
+staged=$(echo "$STAGED" | grep '\\.go$' || true)
+[ -z "$staged" ] && exit 0
+gofmt -s -w $staged
+git add $staged
+"""

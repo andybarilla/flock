@@ -115,9 +115,27 @@
         <tr>
           <td class="font-semibold">{site.domain}</td>
           <td class="text-base-content/70 text-sm">{site.path}</td>
-          <td>{site.php_version || '—'}</td>
-          <td>{site.node_version || '—'}</td>
-          <td>{site.tls ? '✓' : '—'}</td>
+          <td>
+            {#if site.php_version}
+              <span class="badge badge-sm badge-primary">PHP {site.php_version}</span>
+            {:else}
+              <span class="text-base-content/30">—</span>
+            {/if}
+          </td>
+          <td>
+            {#if site.node_version}
+              <span class="badge badge-sm badge-success">Node {site.node_version}</span>
+            {:else}
+              <span class="text-base-content/30">—</span>
+            {/if}
+          </td>
+          <td>
+            {#if site.tls}
+              <span class="badge badge-sm badge-info">TLS</span>
+            {:else}
+              <span class="text-base-content/30">—</span>
+            {/if}
+          </td>
           <td>
             <button
               class="btn btn-ghost btn-sm hover:btn-error"

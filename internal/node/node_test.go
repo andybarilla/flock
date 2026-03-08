@@ -5,9 +5,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/node"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/node"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Mock NodeRunner ---
@@ -75,11 +75,11 @@ func (m *mockHost) Log(pluginID string, msg string, args ...any) {}
 
 func TestPluginIDAndName(t *testing.T) {
 	p := node.NewPlugin(newMockNodeRunner())
-	if p.ID() != "flock-node" {
-		t.Errorf("ID = %q, want flock-node", p.ID())
+	if p.ID() != "rook-node" {
+		t.Errorf("ID = %q, want rook-node", p.ID())
 	}
-	if p.Name() != "Flock Node" {
-		t.Errorf("Name = %q, want Flock Node", p.Name())
+	if p.Name() != "Rook Node" {
+		t.Errorf("Name = %q, want Rook Node", p.Name())
 	}
 }
 

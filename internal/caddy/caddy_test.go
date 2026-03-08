@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	flockCaddy "github.com/andybarilla/flock/internal/caddy"
-	"github.com/andybarilla/flock/internal/registry"
+	rookCaddy "github.com/andybarilla/rook/internal/caddy"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Mock CaddyRunner ---
@@ -70,8 +70,8 @@ func getRoutes(t *testing.T, cfg map[string]any) []any {
 	apps := cfg["apps"].(map[string]any)
 	http := apps["http"].(map[string]any)
 	servers := http["servers"].(map[string]any)
-	flock := servers["flock"].(map[string]any)
-	return flock["routes"].([]any)
+	rook := servers["rook"].(map[string]any)
+	return rook["routes"].([]any)
 }
 
 func getRouteHandler(t *testing.T, route any) map[string]any {
@@ -98,7 +98,7 @@ func TestBuildConfigStaticSite(t *testing.T) {
 		{Path: "/home/user/static", Domain: "static.test", TLS: false},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestBuildConfigProxiedSite(t *testing.T) {
 		{Path: "/home/user/myapp", Domain: "myapp.test", TLS: true},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestBuildConfigMixedSites(t *testing.T) {
 		{Path: "/home/user/docs", Domain: "docs.test", TLS: false},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestBuildConfigMixedSites(t *testing.T) {
 
 func TestBuildConfigAdminDisabled(t *testing.T) {
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	cfgJSON, err := flockCaddy.BuildConfig(nil, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(nil, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestBuildConfigTLSSite(t *testing.T) {
 		{Path: "/home/user/secure", Domain: "secure.test", TLS: true},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, certProvider)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, certProvider)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -231,8 +231,8 @@ func TestBuildConfigTLSSite(t *testing.T) {
 	// Server should have tls_connection_policies
 	http := apps["http"].(map[string]any)
 	servers := http["servers"].(map[string]any)
-	flock := servers["flock"].(map[string]any)
-	policies := flock["tls_connection_policies"].([]any)
+	rook := servers["rook"].(map[string]any)
+	policies := rook["tls_connection_policies"].([]any)
 	if len(policies) != 1 {
 		t.Fatalf("expected 1 tls_connection_policy, got %d", len(policies))
 	}
@@ -244,7 +244,7 @@ func TestBuildConfigTLSSiteNoCertProvider(t *testing.T) {
 		{Path: "/home/user/secure", Domain: "secure.test", TLS: true},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestBuildConfigTLSSiteNoCertProvider(t *testing.T) {
 func TestStartCallsRunnerRun(t *testing.T) {
 	runner := &mockRunner{}
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	m := flockCaddy.NewManager(runner, resolver, nil)
+	m := rookCaddy.NewManager(runner, resolver, nil)
 
 	sites := []registry.Site{
 		{Path: "/tmp/app", Domain: "app.test", TLS: false},
@@ -279,7 +279,7 @@ func TestStartCallsRunnerRun(t *testing.T) {
 func TestReloadCallsRunnerRunAgain(t *testing.T) {
 	runner := &mockRunner{}
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	m := flockCaddy.NewManager(runner, resolver, nil)
+	m := rookCaddy.NewManager(runner, resolver, nil)
 
 	sites := []registry.Site{
 		{Path: "/tmp/app", Domain: "app.test", TLS: false},
@@ -295,7 +295,7 @@ func TestReloadCallsRunnerRunAgain(t *testing.T) {
 func TestStopCallsRunnerStop(t *testing.T) {
 	runner := &mockRunner{}
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	m := flockCaddy.NewManager(runner, resolver, nil)
+	m := rookCaddy.NewManager(runner, resolver, nil)
 
 	_ = m.Start([]registry.Site{{Path: "/tmp/app", Domain: "app.test", TLS: false}})
 	if err := m.Stop(); err != nil {

@@ -1,7 +1,7 @@
 package plugin
 
 import (
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 type Plugin interface {

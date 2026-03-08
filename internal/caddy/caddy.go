@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 type CaddyRunner interface {
@@ -110,7 +110,7 @@ func BuildConfig(sites []registry.Site, resolver UpstreamResolver, certProvider 
 	apps := map[string]any{
 		"http": map[string]any{
 			"servers": map[string]any{
-				"flock": server,
+				"rook": server,
 			},
 		},
 	}

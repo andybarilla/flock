@@ -3,9 +3,9 @@ package ssl_test
 import (
 	"testing"
 
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
-	"github.com/andybarilla/flock/internal/ssl"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
+	"github.com/andybarilla/rook/internal/ssl"
 )
 
 // --- Mock CertStore ---
@@ -76,11 +76,11 @@ func (m *mockHost) Log(pluginID string, msg string, args ...any) {}
 
 func TestPluginIDAndName(t *testing.T) {
 	p := ssl.NewPlugin(newMockCertStore())
-	if p.ID() != "flock-ssl" {
-		t.Errorf("ID = %q, want flock-ssl", p.ID())
+	if p.ID() != "rook-ssl" {
+		t.Errorf("ID = %q, want rook-ssl", p.ID())
 	}
-	if p.Name() != "Flock SSL" {
-		t.Errorf("Name = %q, want Flock SSL", p.Name())
+	if p.Name() != "Rook SSL" {
+		t.Errorf("Name = %q, want Rook SSL", p.Name())
 	}
 }
 

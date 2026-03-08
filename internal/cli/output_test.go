@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/cli"
+	"github.com/andybarilla/rook/internal/cli"
 )
 
 func TestFormatTable(t *testing.T) {

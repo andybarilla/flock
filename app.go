@@ -6,11 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/andybarilla/flock/internal/config"
-	"github.com/andybarilla/flock/internal/core"
-	"github.com/andybarilla/flock/internal/databases"
-	"github.com/andybarilla/flock/internal/node"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/config"
+	"github.com/andybarilla/rook/internal/core"
+	"github.com/andybarilla/rook/internal/databases"
+	"github.com/andybarilla/rook/internal/node"
+	"github.com/andybarilla/rook/internal/registry"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -36,7 +36,7 @@ func (a *App) startup(ctx context.Context) {
 	if err != nil {
 		logFile = os.Stderr
 	}
-	logger := log.New(logFile, "[flock] ", log.LstdFlags)
+	logger := log.New(logFile, "[rook] ", log.LstdFlags)
 
 	cfg := core.Config{
 		SitesFile:    config.SitesFile(),

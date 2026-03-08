@@ -3,7 +3,7 @@ package cli_test
 import (
 	"testing"
 
-	"github.com/andybarilla/flock/internal/cli"
+	"github.com/andybarilla/rook/internal/cli"
 )
 
 func TestNewCoreReturnsNonNil(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 type pluginEntry struct {

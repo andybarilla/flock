@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 type NodeRunner interface {
@@ -34,8 +34,8 @@ func NewPlugin(runner NodeRunner) *Plugin {
 	}
 }
 
-func (p *Plugin) ID() string   { return "flock-node" }
-func (p *Plugin) Name() string { return "Flock Node" }
+func (p *Plugin) ID() string   { return "rook-node" }
+func (p *Plugin) Name() string { return "Rook Node" }
 
 func (p *Plugin) Init(host plugin.Host) error {
 	p.host = host

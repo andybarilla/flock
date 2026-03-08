@@ -16,13 +16,13 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            archive_name: flock-linux-amd64.tar.gz
+            archive_name: rook-linux-amd64.tar.gz
           - os: macos-latest
             platform: darwin
-            archive_name: flock-darwin-arm64.tar.gz
+            archive_name: rook-darwin-arm64.tar.gz
           - os: windows-latest
             platform: windows
-            archive_name: flock-windows-amd64.zip
+            archive_name: rook-windows-amd64.zip
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

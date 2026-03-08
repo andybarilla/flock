@@ -10,13 +10,13 @@
 
 ## Overview
 
-Bootstrap the Flock Go + Wails desktop app. Creates the project structure, establishes platform-aware config/data paths, and sets up a CI matrix across macOS, Linux, and Windows.
+Bootstrap the Rook Go + Wails desktop app. Creates the project structure, establishes platform-aware config/data paths, and sets up a CI matrix across macOS, Linux, and Windows.
 
 ## Current State Analysis
 
 - Empty repo with only planning docs (`docs/`, `CLAUDE.md`, `README.md`)
 - No Go module, no source code
-- Go module path will be `github.com/andybarilla/flock`
+- Go module path will be `github.com/andybarilla/rook`
 
 ## Target State
 
@@ -33,7 +33,7 @@ Run `wails init` to generate the project scaffold, then verify it builds.
 
 **Files created by Wails:**
 
-- `go.mod` — Go module (`github.com/andybarilla/flock`)
+- `go.mod` — Go module (`github.com/andybarilla/rook`)
 - `main.go` — Entry point wiring Wails options
 - `app.go` — App struct with `startup`/`shutdown` hooks
 - `wails.json` — Wails project config
@@ -44,9 +44,9 @@ Run `wails init` to generate the project scaffold, then verify it builds.
 Write tests first, then implement the `internal/config` package providing platform-correct paths for config and data files.
 
 **Platform conventions:**
-- Linux/macOS config: `~/.config/flock/`
-- Linux/macOS data/logs: `~/.local/share/flock/`
-- Windows config + data: `%APPDATA%\flock\`
+- Linux/macOS config: `~/.config/rook/`
+- Linux/macOS data/logs: `~/.local/share/rook/`
+- Windows config + data: `%APPDATA%\rook\`
 
 **Files to create:**
 
@@ -70,7 +70,7 @@ CI workflow that runs `go test ./...` on all three platforms.
 - [ ] `ConfigDir()` returns correct path per platform
 - [ ] `DataDir()` returns correct path per platform
 - [ ] `SitesFile()` returns `<ConfigDir>/sites.json`
-- [ ] `LogFile()` returns `<DataDir>/flock.log`
+- [ ] `LogFile()` returns `<DataDir>/rook.log`
 
 ### Technical Requirements
 
@@ -92,8 +92,8 @@ CI workflow that runs `go test ./...` on all three platforms.
 
 ## Notes
 
-- Design doc: `docs/plans/2026-03-03-flock-core-design.md`
-- Detailed implementation reference: `docs/plans/2026-03-03-flock-core.md` (Task 1)
+- Design doc: `docs/plans/2026-03-03-rook-core-design.md`
+- Detailed implementation reference: `docs/plans/2026-03-03-rook-core.md` (Task 1)
 - Wails v2 requires `libgtk-3-dev libwebkit2gtk-4.0-dev` on Linux (handled in CI)
 
 ## Dependencies

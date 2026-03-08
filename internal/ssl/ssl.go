@@ -3,7 +3,7 @@ package ssl
 import (
 	"fmt"
 
-	"github.com/andybarilla/flock/internal/plugin"
+	"github.com/andybarilla/rook/internal/plugin"
 )
 
 type CertStore interface {
@@ -24,8 +24,8 @@ func NewPlugin(store CertStore) *Plugin {
 	return &Plugin{store: store, status: plugin.ServiceStopped}
 }
 
-func (p *Plugin) ID() string   { return "flock-ssl" }
-func (p *Plugin) Name() string { return "Flock SSL" }
+func (p *Plugin) ID() string   { return "rook-ssl" }
+func (p *Plugin) Name() string { return "Rook SSL" }
 
 func (p *Plugin) Init(host plugin.Host) error {
 	p.host = host

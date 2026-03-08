@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/cli"
-	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/rook/internal/cli"
+	"github.com/andybarilla/rook/internal/databases"
 )
 
 func TestRenderServiceStatus(t *testing.T) {

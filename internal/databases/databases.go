@@ -1,7 +1,7 @@
 package databases
 
 import (
-	"github.com/andybarilla/flock/internal/plugin"
+	"github.com/andybarilla/rook/internal/plugin"
 )
 
 // Plugin manages MySQL, PostgreSQL, and Redis services.
@@ -31,8 +31,8 @@ func (p *Plugin) SetBinaryChecker(fn func(string) bool) {
 	p.binaryChecker = fn
 }
 
-func (p *Plugin) ID() string   { return "flock-databases" }
-func (p *Plugin) Name() string { return "Flock Databases" }
+func (p *Plugin) ID() string   { return "rook-databases" }
+func (p *Plugin) Name() string { return "Rook Databases" }
 
 func (p *Plugin) Init(host plugin.Host) error {
 	p.host = host

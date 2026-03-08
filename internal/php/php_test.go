@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/php"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/php"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Mock FPMRunner ---
@@ -70,11 +70,11 @@ func (m *mockHost) Log(pluginID string, msg string, args ...any) {}
 
 func TestPluginIDAndName(t *testing.T) {
 	p := php.NewPlugin(newMockFPMRunner())
-	if p.ID() != "flock-php" {
-		t.Errorf("ID = %q, want flock-php", p.ID())
+	if p.ID() != "rook-php" {
+		t.Errorf("ID = %q, want rook-php", p.ID())
 	}
-	if p.Name() != "Flock PHP" {
-		t.Errorf("Name = %q, want Flock PHP", p.Name())
+	if p.Name() != "Rook PHP" {
+		t.Errorf("Name = %q, want Rook PHP", p.Name())
 	}
 }
 

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/ssl"
+	"github.com/andybarilla/rook/internal/ssl"
 )
 
 func TestLocalCertStoreInstallCA(t *testing.T) {

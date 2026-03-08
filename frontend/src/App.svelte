@@ -7,6 +7,7 @@
   import SiteList from './SiteList.svelte';
   import AddSiteForm from './AddSiteForm.svelte';
   import ServiceList from './ServiceList.svelte';
+  import SettingsTab from './SettingsTab.svelte';
   import ToastContainer from './lib/ToastContainer.svelte';
 
   let sites = [];
@@ -130,7 +131,7 @@
       {:else if activeTab === 'services'}
         <ServiceList {services} loaded={servicesLoaded} onStart={handleStartService} onStop={handleStopService} />
       {:else if activeTab === 'settings'}
-        <p class="text-base-content/70">Settings coming in next task.</p>
+        <SettingsTab />
       {/if}
     </div>
   </div>

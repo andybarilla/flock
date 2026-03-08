@@ -10,7 +10,10 @@ vi.mock('../wailsjs/go/main/App.js', () => ({
   StopDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('./lib/theme.js', () => ({ initTheme: vi.fn(), theme: { subscribe: vi.fn() } }));
+vi.mock('./lib/theme.js', () => {
+  const { writable } = require('svelte/store');
+  return { initTheme: vi.fn(), toggleTheme: vi.fn(), theme: writable('light') };
+});
 
 import App from './App.svelte';
 

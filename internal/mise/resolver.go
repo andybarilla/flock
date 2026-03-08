@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -214,6 +215,33 @@ func (c *cliExecutor) IsInstalled(tool, version string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// parseVersionConstraint extracts a base version number from a version
+// constraint string (e.g., "^8.2" -> "8.2", ">=18" -> "18").
+// For compound constraints (e.g., "^8.2 || ^8.3"), returns the first version.
+// Returns empty string if no version can be extracted.
+func parseVersionConstraint(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	// For compound constraints, take the first part
+	if idx := strings.Index(s, "||"); idx != -1 {
+		s = strings.TrimSpace(s[:idx])
+	}
+	// For space-separated constraints (e.g., ">=8.2 <9.0"), take the first part
+	if idx := strings.Index(s, " "); idx != -1 {
+		s = strings.TrimSpace(s[:idx])
+	}
+	// Strip leading operators and 'v' prefix
+	re := regexp.MustCompile(`^[~^>=<v]+`)
+	s = re.ReplaceAllString(s, "")
+	// Validate it looks like a version number
+	if matched, _ := regexp.MatchString(`^\d+(\.\d+)*$`, s); !matched {
+		return ""
+	}
+	return s
 }
 
 func (c *cliExecutor) ListInstalled(tool string) ([]string, error) {

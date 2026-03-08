@@ -488,3 +488,32 @@ func TestListInstalled_ReturnsVersions(t *testing.T) {
 		t.Fatalf("expected [8.2.0 8.3.0], got %v", versions)
 	}
 }
+
+func TestParseVersionConstraint(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"^8.2", "8.2"},
+		{">=18", "18"},
+		{"~8.1.0", "8.1.0"},
+		{">8.0", "8.0"},
+		{"v20.1", "20.1"},
+		{"8.3", "8.3"},
+		{"^8.2 || ^8.3", "8.2"},
+		{"=8.2", "8.2"},
+		{"", ""},
+		{"not-a-version", ""},
+		{"*", ""},
+		{">=8.2 <9.0", "8.2"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := parseVersionConstraint(tt.input)
+			if result != tt.expected {
+				t.Fatalf("parseVersionConstraint(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}

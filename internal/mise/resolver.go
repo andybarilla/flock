@@ -3,7 +3,9 @@ package mise
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -269,4 +271,41 @@ func parseVersionConstraint(s string) string {
 		return ""
 	}
 	return s
+}
+
+// detectFromProjectFiles checks for composer.json and package.json in the
+// given directory and extracts runtime version requirements.
+// Returns a map of tool name -> version (e.g., {"php": "8.2", "node": "18"}).
+func detectFromProjectFiles(dir string) map[string]string {
+	result := map[string]string{}
+
+	// Check composer.json for PHP version
+	if data, err := os.ReadFile(filepath.Join(dir, "composer.json")); err == nil {
+		var composer struct {
+			Require map[string]string `json:"require"`
+		}
+		if json.Unmarshal(data, &composer) == nil {
+			if constraint, ok := composer.Require["php"]; ok {
+				if v := parseVersionConstraint(constraint); v != "" {
+					result["php"] = v
+				}
+			}
+		}
+	}
+
+	// Check package.json for Node version
+	if data, err := os.ReadFile(filepath.Join(dir, "package.json")); err == nil {
+		var pkg struct {
+			Engines map[string]string `json:"engines"`
+		}
+		if json.Unmarshal(data, &pkg) == nil {
+			if constraint, ok := pkg.Engines["node"]; ok {
+				if v := parseVersionConstraint(constraint); v != "" {
+					result["node"] = v
+				}
+			}
+		}
+	}
+
+	return result
 }

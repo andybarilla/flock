@@ -2,7 +2,9 @@ package mise
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -486,6 +488,106 @@ func TestListInstalled_ReturnsVersions(t *testing.T) {
 	}
 	if versions[0] != "8.2.0" || versions[1] != "8.3.0" {
 		t.Fatalf("expected [8.2.0 8.3.0], got %v", versions)
+	}
+}
+
+func TestDetectFromProjectFiles_ComposerJSON(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{
+		"require": {
+			"php": "^8.2",
+			"laravel/framework": "^11.0"
+		}
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if result["php"] != "8.2" {
+		t.Fatalf("expected php 8.2, got %q", result["php"])
+	}
+	if _, ok := result["node"]; ok {
+		t.Fatal("expected no node entry")
+	}
+}
+
+func TestDetectFromProjectFiles_PackageJSON(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+		"name": "my-app",
+		"engines": {
+			"node": ">=18"
+		}
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if result["node"] != "18" {
+		t.Fatalf("expected node 18, got %q", result["node"])
+	}
+	if _, ok := result["php"]; ok {
+		t.Fatal("expected no php entry")
+	}
+}
+
+func TestDetectFromProjectFiles_BothFiles(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{
+		"require": {"php": "^8.3"}
+	}`), 0644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+		"engines": {"node": "20"}
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if result["php"] != "8.3" {
+		t.Fatalf("expected php 8.3, got %q", result["php"])
+	}
+	if result["node"] != "20" {
+		t.Fatalf("expected node 20, got %q", result["node"])
+	}
+}
+
+func TestDetectFromProjectFiles_NoFiles(t *testing.T) {
+	dir := t.TempDir()
+	result := detectFromProjectFiles(dir)
+	if len(result) != 0 {
+		t.Fatalf("expected empty map, got %v", result)
+	}
+}
+
+func TestDetectFromProjectFiles_NoVersionInComposer(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`{
+		"require": {
+			"laravel/framework": "^11.0"
+		}
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if _, ok := result["php"]; ok {
+		t.Fatal("expected no php entry when composer.json has no php requirement")
+	}
+}
+
+func TestDetectFromProjectFiles_NoEnginesInPackageJSON(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{
+		"name": "my-app",
+		"version": "1.0.0"
+	}`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if _, ok := result["node"]; ok {
+		t.Fatal("expected no node entry when package.json has no engines")
+	}
+}
+
+func TestDetectFromProjectFiles_InvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "composer.json"), []byte(`not json`), 0644)
+	os.WriteFile(filepath.Join(dir, "package.json"), []byte(`not json`), 0644)
+
+	result := detectFromProjectFiles(dir)
+	if len(result) != 0 {
+		t.Fatalf("expected empty map for invalid JSON, got %v", result)
 	}
 }
 

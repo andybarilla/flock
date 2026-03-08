@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/cli"
+	"github.com/andybarilla/rook/internal/cli"
 )
 
 func TestRootCommandShowsHelp(t *testing.T) {

@@ -6,11 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/andybarilla/flock/internal/config"
-	"github.com/andybarilla/flock/internal/core"
-	"github.com/andybarilla/flock/internal/databases"
-	"github.com/andybarilla/flock/internal/node"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/config"
+	"github.com/andybarilla/rook/internal/core"
+	"github.com/andybarilla/rook/internal/databases"
+	"github.com/andybarilla/rook/internal/node"
+	"github.com/andybarilla/rook/internal/registry"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 

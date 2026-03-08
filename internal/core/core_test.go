@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/core"
-	"github.com/andybarilla/flock/internal/databases"
-	"github.com/andybarilla/flock/internal/mise"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/core"
+	"github.com/andybarilla/rook/internal/databases"
+	"github.com/andybarilla/rook/internal/mise"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Stubs ---

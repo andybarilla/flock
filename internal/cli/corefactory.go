@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/andybarilla/flock/internal/config"
-	"github.com/andybarilla/flock/internal/core"
-	"github.com/andybarilla/flock/internal/databases"
-	"github.com/andybarilla/flock/internal/node"
+	"github.com/andybarilla/rook/internal/config"
+	"github.com/andybarilla/rook/internal/core"
+	"github.com/andybarilla/rook/internal/databases"
+	"github.com/andybarilla/rook/internal/node"
 )
 
 func NewCore() (*core.Core, func(), error) {

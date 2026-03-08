@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/config"
+	"github.com/andybarilla/rook/internal/config"
 )
 
 func TestConfigDir(t *testing.T) {

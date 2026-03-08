@@ -3,9 +3,9 @@ package ssl_test
 import (
 	"testing"
 
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
-	"github.com/andybarilla/flock/internal/ssl"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
+	"github.com/andybarilla/rook/internal/ssl"
 )
 
 // --- Mock CertStore ---

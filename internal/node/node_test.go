@@ -5,9 +5,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/node"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/node"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Mock NodeRunner ---

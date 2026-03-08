@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/rook/internal/databases"
 	"github.com/spf13/cobra"
 )
 

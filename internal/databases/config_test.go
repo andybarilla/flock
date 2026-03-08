@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/databases"
+	"github.com/andybarilla/rook/internal/databases"
 )
 
 func TestDefaultConfig(t *testing.T) {

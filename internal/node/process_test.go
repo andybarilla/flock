@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andybarilla/flock/internal/node"
+	"github.com/andybarilla/rook/internal/node"
 )
 
 func TestProcessRunnerStartAndStop(t *testing.T) {

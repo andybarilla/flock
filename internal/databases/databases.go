@@ -1,7 +1,7 @@
 package databases
 
 import (
-	"github.com/andybarilla/flock/internal/plugin"
+	"github.com/andybarilla/rook/internal/plugin"
 )
 
 // Plugin manages MySQL, PostgreSQL, and Redis services.

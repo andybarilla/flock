@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/discovery"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/discovery"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // pipeProcess connects stdin/stdout via pipes for testing

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/andybarilla/flock/internal/php"
-	"github.com/andybarilla/flock/internal/plugin"
-	"github.com/andybarilla/flock/internal/registry"
+	"github.com/andybarilla/rook/internal/php"
+	"github.com/andybarilla/rook/internal/plugin"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Mock FPMRunner ---

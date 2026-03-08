@@ -3,7 +3,7 @@ package ssl
 import (
 	"fmt"
 
-	"github.com/andybarilla/flock/internal/plugin"
+	"github.com/andybarilla/rook/internal/plugin"
 )
 
 type CertStore interface {

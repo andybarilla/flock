@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	flockCaddy "github.com/andybarilla/flock/internal/caddy"
-	"github.com/andybarilla/flock/internal/registry"
+	flockCaddy "github.com/andybarilla/rook/internal/caddy"
+	"github.com/andybarilla/rook/internal/registry"
 )
 
 // --- Mock CaddyRunner ---

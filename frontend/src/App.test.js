@@ -10,6 +10,8 @@ vi.mock('../wailsjs/go/main/App.js', () => ({
   StopDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('./lib/theme.js', () => ({ initTheme: vi.fn(), theme: { subscribe: vi.fn() } }));
+
 import App from './App.svelte';
 
 describe('App keyboard shortcuts', () => {
@@ -75,5 +77,54 @@ describe('App keyboard shortcuts', () => {
       expect(AddSite).toHaveBeenCalledWith('/tmp/myapp', 'myapp.test', '', '', false);
     });
     vi.useRealTimers();
+  });
+});
+
+describe('tab navigation', () => {
+  it('renders three tabs: Sites, Services, Settings', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Sites' })).toBeTruthy();
+      expect(getByRole('tab', { name: 'Services' })).toBeTruthy();
+      expect(getByRole('tab', { name: 'Settings' })).toBeTruthy();
+    });
+  });
+
+  it('shows Sites tab as active by default', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Sites' }).classList.contains('tab-active')).toBe(true);
+    });
+  });
+
+  it('switches to Services tab on click', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Services' })).toBeTruthy();
+    });
+    await fireEvent.click(getByRole('tab', { name: 'Services' }));
+    expect(getByRole('tab', { name: 'Services' }).classList.contains('tab-active')).toBe(true);
+    expect(getByRole('tab', { name: 'Sites' }).classList.contains('tab-active')).toBe(false);
+  });
+
+  it('switches to Settings tab on click', async () => {
+    const { ListSites, DatabaseServices } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([]);
+    DatabaseServices.mockResolvedValue([]);
+    const { getByRole } = render(App);
+    await vi.waitFor(() => {
+      expect(getByRole('tab', { name: 'Settings' })).toBeTruthy();
+    });
+    await fireEvent.click(getByRole('tab', { name: 'Settings' }));
+    expect(getByRole('tab', { name: 'Settings' }).classList.contains('tab-active')).toBe(true);
   });
 });

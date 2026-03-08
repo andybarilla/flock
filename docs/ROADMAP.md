@@ -42,8 +42,8 @@ Architecture design: `docs/plans/2026-03-03-rook-core-design.md`
 - [x] Site registry — See: docs/tasks/002-site-registry.md
 - [x] Plugin interfaces + host — See: docs/tasks/003-plugin-host.md
 - [x] Caddy manager (embedded) — See: docs/tasks/004-caddy-manager.md
-- [x] rook-ssl plugin (mkcert) — See: docs/tasks/005-flock-ssl.md
-- [x] rook-php plugin (FPM pools) — See: docs/tasks/006-flock-php.md
+- [x] rook-ssl plugin (mkcert) — See: docs/tasks/005-rook-ssl.md
+- [x] rook-php plugin (FPM pools) — See: docs/tasks/006-rook-php.md
 - [x] Core wiring — See: docs/tasks/007-core-wiring.md
 - [x] GUI: system tray + site list — See: docs/tasks/008-gui-site-list.md
 

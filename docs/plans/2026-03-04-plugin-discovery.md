@@ -232,7 +232,7 @@ type PluginManifest struct {
 	Version         string   `json:"version"`
 	Executable      string   `json:"executable"`
 	Capabilities    []string `json:"capabilities"`
-	MinFlockVersion string   `json:"minFlockVersion,omitempty"`
+	MinRookVersion string   `json:"minRookVersion,omitempty"`
 	ExePath         string   `json:"-"`
 }
 

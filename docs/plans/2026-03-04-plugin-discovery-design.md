@@ -27,7 +27,7 @@ Rook scans `~/.config/rook/plugins/` (platform-aware via existing `config` packa
   "version": "0.1.0",
   "executable": "rook-node",
   "capabilities": ["runtime"],
-  "minFlockVersion": "0.1.0"
+  "minRookVersion": "0.1.0"
 }
 ```
 
@@ -36,7 +36,7 @@ Rook scans `~/.config/rook/plugins/` (platform-aware via existing `config` packa
 - `version` — semver version string
 - `executable` — filename of the executable within the plugin directory
 - `capabilities` — array of `"runtime"` (handles site requests) and/or `"service"` (manages background services)
-- `minFlockVersion` — minimum compatible Rook version
+- `minRookVersion` — minimum compatible Rook version
 
 ### Validation
 

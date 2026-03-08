@@ -111,6 +111,40 @@ func (r *RuntimeResolver) Detect(siteDir string) (map[string]string, error) {
 	return r.executor.Detect(siteDir)
 }
 
+// Install installs a specific version of a tool via mise.
+// Returns an error if mise is not available.
+func (r *RuntimeResolver) Install(tool, version string) error {
+	ok, _ := r.Available()
+	if !ok {
+		return fmt.Errorf("mise is not available")
+	}
+	return r.executor.Install(tool, version)
+}
+
+// IsInstalled checks whether a specific version of a tool is installed via mise.
+// Returns false if mise is not available or if the check fails.
+func (r *RuntimeResolver) IsInstalled(tool, version string) bool {
+	ok, _ := r.Available()
+	if !ok {
+		return false
+	}
+	installed, err := r.executor.IsInstalled(tool, version)
+	if err != nil {
+		return false
+	}
+	return installed
+}
+
+// ListInstalled returns all installed versions of a tool via mise.
+// Returns an error if mise is not available.
+func (r *RuntimeResolver) ListInstalled(tool string) ([]string, error) {
+	ok, _ := r.Available()
+	if !ok {
+		return nil, fmt.Errorf("mise is not available")
+	}
+	return r.executor.ListInstalled(tool)
+}
+
 // cliExecutor implements Executor by calling the real mise CLI.
 type cliExecutor struct{}
 
@@ -166,13 +200,35 @@ func parseCurrentVersions(data []byte) (map[string]string, error) {
 }
 
 func (c *cliExecutor) Install(tool, version string) error {
-	return fmt.Errorf("not implemented")
+	return exec.Command("mise", "install", tool+"@"+version).Run()
 }
 
 func (c *cliExecutor) IsInstalled(tool, version string) (bool, error) {
-	return false, fmt.Errorf("not implemented")
+	out, err := exec.Command("mise", "ls", "--installed", tool).Output()
+	if err != nil {
+		return false, err
+	}
+	return strings.Contains(string(out), version), nil
 }
 
 func (c *cliExecutor) ListInstalled(tool string) ([]string, error) {
-	return nil, fmt.Errorf("not implemented")
+	out, err := exec.Command("mise", "ls", "--installed", tool, "--json").Output()
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string][]struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(out, &raw); err != nil {
+		return nil, err
+	}
+	var versions []string
+	for _, entries := range raw {
+		for _, e := range entries {
+			if e.Version != "" {
+				versions = append(versions, e.Version)
+			}
+		}
+	}
+	return versions, nil
 }

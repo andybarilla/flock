@@ -16,6 +16,20 @@ type stubExecutor struct {
 	whichVersionErrors  map[string]error
 	detectOut           map[string]string
 	detectErr           error
+
+	// Install tracking
+	installCalled  bool
+	installTool    string
+	installVersion string
+	installErr     error
+
+	// IsInstalled tracking
+	isInstalled    bool
+	isInstalledErr error
+
+	// ListInstalled tracking
+	listInstalled    []string
+	listInstalledErr error
 }
 
 func (s *stubExecutor) Available() (bool, string) {
@@ -54,15 +68,21 @@ func (s *stubExecutor) Detect(dir string) (map[string]string, error) {
 }
 
 func (s *stubExecutor) Install(tool, version string) error {
-	return fmt.Errorf("not implemented")
+	s.installCalled = true
+	s.installTool = tool
+	s.installVersion = version
+	return s.installErr
 }
 
 func (s *stubExecutor) IsInstalled(tool, version string) (bool, error) {
-	return false, fmt.Errorf("not implemented")
+	return s.isInstalled, s.isInstalledErr
 }
 
 func (s *stubExecutor) ListInstalled(tool string) ([]string, error) {
-	return nil, fmt.Errorf("not implemented")
+	if s.listInstalledErr != nil {
+		return nil, s.listInstalledErr
+	}
+	return s.listInstalled, nil
 }
 
 func TestAvailable_ReturnsTrueWhenMiseInPath(t *testing.T) {
@@ -377,5 +397,94 @@ func TestParseCurrentVersions_InvalidJSON(t *testing.T) {
 	}
 	if len(result) != 0 {
 		t.Fatalf("expected empty map, got %v", result)
+	}
+}
+
+func TestInstall_ErrorsWhenMiseUnavailable(t *testing.T) {
+	stub := &stubExecutor{available: false}
+	r := NewWithExecutor(stub)
+
+	err := r.Install("php", "8.3.0")
+	if err == nil {
+		t.Fatal("expected error when mise is unavailable")
+	}
+	if err.Error() != "mise is not available" {
+		t.Fatalf("expected 'mise is not available', got: %v", err)
+	}
+}
+
+func TestInstall_DelegatesToExecutor(t *testing.T) {
+	stub := &stubExecutor{available: true, version: "1.0.0"}
+	r := NewWithExecutor(stub)
+
+	err := r.Install("php", "8.3.0")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !stub.installCalled {
+		t.Fatal("expected Install to be called on executor")
+	}
+	if stub.installTool != "php" {
+		t.Fatalf("expected tool 'php', got %q", stub.installTool)
+	}
+	if stub.installVersion != "8.3.0" {
+		t.Fatalf("expected version '8.3.0', got %q", stub.installVersion)
+	}
+}
+
+func TestIsInstalled_ReturnsFalseWhenMiseUnavailable(t *testing.T) {
+	stub := &stubExecutor{available: false}
+	r := NewWithExecutor(stub)
+
+	result := r.IsInstalled("php", "8.3.0")
+	if result {
+		t.Fatal("expected false when mise is unavailable")
+	}
+}
+
+func TestIsInstalled_DelegatesToExecutor(t *testing.T) {
+	stub := &stubExecutor{
+		available:   true,
+		version:     "1.0.0",
+		isInstalled: true,
+	}
+	r := NewWithExecutor(stub)
+
+	result := r.IsInstalled("php", "8.3.0")
+	if !result {
+		t.Fatal("expected true when executor returns true")
+	}
+}
+
+func TestListInstalled_ErrorsWhenMiseUnavailable(t *testing.T) {
+	stub := &stubExecutor{available: false}
+	r := NewWithExecutor(stub)
+
+	_, err := r.ListInstalled("php")
+	if err == nil {
+		t.Fatal("expected error when mise is unavailable")
+	}
+	if err.Error() != "mise is not available" {
+		t.Fatalf("expected 'mise is not available', got: %v", err)
+	}
+}
+
+func TestListInstalled_ReturnsVersions(t *testing.T) {
+	stub := &stubExecutor{
+		available:     true,
+		version:       "1.0.0",
+		listInstalled: []string{"8.2.0", "8.3.0"},
+	}
+	r := NewWithExecutor(stub)
+
+	versions, err := r.ListInstalled("php")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(versions) != 2 {
+		t.Fatalf("expected 2 versions, got %d", len(versions))
+	}
+	if versions[0] != "8.2.0" || versions[1] != "8.3.0" {
+		t.Fatalf("expected [8.2.0 8.3.0], got %v", versions)
 	}
 }

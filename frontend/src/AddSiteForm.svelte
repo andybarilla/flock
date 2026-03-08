@@ -6,8 +6,6 @@
 
   const dispatch = createEventDispatcher();
 
-  const dispatch = createEventDispatcher();
-
   export let onAdd = () => {};
 
   let path = '';

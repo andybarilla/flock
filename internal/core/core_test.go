@@ -444,6 +444,58 @@ func TestCheckRuntimes_ReturnsStatusForSites(t *testing.T) {
 	}
 }
 
+func TestUpdateSiteReloadsCaddy(t *testing.T) {
+	cfg, runner, _, _, _, _ := testConfig(t)
+
+	dir := t.TempDir()
+	sitesJSON := fmt.Sprintf(`[{"path":%q,"domain":"app.test"}]`, dir)
+	os.MkdirAll(filepath.Dir(cfg.SitesFile), 0o755)
+	os.WriteFile(cfg.SitesFile, []byte(sitesJSON), 0o644)
+
+	c := core.NewCore(cfg)
+	_ = c.Start()
+	defer c.Stop()
+
+	initialRuns := runner.runCalls
+
+	newDir := t.TempDir()
+	err := c.UpdateSite("app.test", registry.Site{
+		Path:   newDir,
+		Domain: "app.test",
+		TLS:    true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateSite: %v", err)
+	}
+
+	if runner.runCalls != initialRuns+1 {
+		t.Errorf("caddy runCalls = %d, want %d (reload after UpdateSite)", runner.runCalls, initialRuns+1)
+	}
+
+	sites := c.Sites()
+	if len(sites) != 1 {
+		t.Fatalf("expected 1 site, got %d", len(sites))
+	}
+	if !sites[0].TLS {
+		t.Errorf("TLS = false, want true")
+	}
+	if sites[0].Path != newDir {
+		t.Errorf("path = %q, want %q", sites[0].Path, newDir)
+	}
+}
+
+func TestUpdateSiteNotFound(t *testing.T) {
+	cfg, _, _, _, _, _ := testConfig(t)
+	c := core.NewCore(cfg)
+	_ = c.Start()
+	defer c.Stop()
+
+	err := c.UpdateSite("nonexistent.test", registry.Site{Domain: "nonexistent.test", Path: "/tmp"})
+	if err == nil {
+		t.Error("expected error for nonexistent domain")
+	}
+}
+
 func TestRemoveSiteReloadsCaddy(t *testing.T) {
 	cfg, runner, _, _, _, _ := testConfig(t)
 

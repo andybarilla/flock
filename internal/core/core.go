@@ -139,6 +139,15 @@ func (c *Core) RemoveSite(domain string) error {
 	return c.registry.Remove(domain)
 }
 
+func (c *Core) UpdateSite(domain string, updated registry.Site) error {
+	return c.registry.Update(domain, func(s *registry.Site) {
+		s.Path = updated.Path
+		s.PHPVersion = updated.PHPVersion
+		s.NodeVersion = updated.NodeVersion
+		s.TLS = updated.TLS
+	})
+}
+
 func (c *Core) Plugins() []plugin.PluginInfo {
 	return c.pluginMgr.Plugins()
 }

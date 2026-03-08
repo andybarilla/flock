@@ -2,7 +2,9 @@ package main
 
 import (
 	"embed"
+	"os"
 
+	"github.com/andybarilla/flock/internal/cli"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -12,6 +14,12 @@ import (
 var assets embed.FS
 
 func main() {
+	// If CLI arguments are provided, dispatch to the CLI handler
+	if len(os.Args) > 1 {
+		cli.Execute()
+		return
+	}
+
 	// Create an instance of the app structure
 	app := NewApp()
 

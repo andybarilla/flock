@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	flockCaddy "github.com/andybarilla/rook/internal/caddy"
+	rookCaddy "github.com/andybarilla/rook/internal/caddy"
 	"github.com/andybarilla/rook/internal/registry"
 )
 
@@ -98,7 +98,7 @@ func TestBuildConfigStaticSite(t *testing.T) {
 		{Path: "/home/user/static", Domain: "static.test", TLS: false},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestBuildConfigProxiedSite(t *testing.T) {
 		{Path: "/home/user/myapp", Domain: "myapp.test", TLS: true},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestBuildConfigMixedSites(t *testing.T) {
 		{Path: "/home/user/docs", Domain: "docs.test", TLS: false},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestBuildConfigMixedSites(t *testing.T) {
 
 func TestBuildConfigAdminDisabled(t *testing.T) {
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	cfgJSON, err := flockCaddy.BuildConfig(nil, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(nil, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestBuildConfigTLSSite(t *testing.T) {
 		{Path: "/home/user/secure", Domain: "secure.test", TLS: true},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, certProvider)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, certProvider)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -244,7 +244,7 @@ func TestBuildConfigTLSSiteNoCertProvider(t *testing.T) {
 		{Path: "/home/user/secure", Domain: "secure.test", TLS: true},
 	}
 
-	cfgJSON, err := flockCaddy.BuildConfig(sites, resolver, nil)
+	cfgJSON, err := rookCaddy.BuildConfig(sites, resolver, nil)
 	if err != nil {
 		t.Fatalf("BuildConfig: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestBuildConfigTLSSiteNoCertProvider(t *testing.T) {
 func TestStartCallsRunnerRun(t *testing.T) {
 	runner := &mockRunner{}
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	m := flockCaddy.NewManager(runner, resolver, nil)
+	m := rookCaddy.NewManager(runner, resolver, nil)
 
 	sites := []registry.Site{
 		{Path: "/tmp/app", Domain: "app.test", TLS: false},
@@ -279,7 +279,7 @@ func TestStartCallsRunnerRun(t *testing.T) {
 func TestReloadCallsRunnerRunAgain(t *testing.T) {
 	runner := &mockRunner{}
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	m := flockCaddy.NewManager(runner, resolver, nil)
+	m := rookCaddy.NewManager(runner, resolver, nil)
 
 	sites := []registry.Site{
 		{Path: "/tmp/app", Domain: "app.test", TLS: false},
@@ -295,7 +295,7 @@ func TestReloadCallsRunnerRunAgain(t *testing.T) {
 func TestStopCallsRunnerStop(t *testing.T) {
 	runner := &mockRunner{}
 	resolver := &mockResolver{upstreams: map[string]string{}}
-	m := flockCaddy.NewManager(runner, resolver, nil)
+	m := rookCaddy.NewManager(runner, resolver, nil)
 
 	_ = m.Start([]registry.Site{{Path: "/tmp/app", Domain: "app.test", TLS: false}})
 	if err := m.Stop(); err != nil {

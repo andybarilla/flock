@@ -8,13 +8,13 @@ import (
 )
 
 type PluginManifest struct {
-	ID              string   `json:"id"`
-	Name            string   `json:"name"`
-	Version         string   `json:"version"`
-	Executable      string   `json:"executable"`
-	Capabilities    []string `json:"capabilities"`
-	MinFlockVersion string   `json:"minFlockVersion,omitempty"`
-	ExePath         string   `json:"-"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Version        string   `json:"version"`
+	Executable     string   `json:"executable"`
+	Capabilities   []string `json:"capabilities"`
+	MinRookVersion string   `json:"minRookVersion,omitempty"`
+	ExePath        string   `json:"-"`
 }
 
 func Scan(dir string) ([]PluginManifest, []error) {

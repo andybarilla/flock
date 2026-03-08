@@ -107,6 +107,7 @@ func (r *RuntimeResolver) WhichVersion(tool, version string) (string, error) {
 // Detect returns tool versions configured for a site directory.
 // It checks mise first (if available), then falls back to project config
 // files (composer.json, package.json) to fill any gaps.
+// Errors from mise are swallowed intentionally — this is best-effort detection.
 func (r *RuntimeResolver) Detect(siteDir string) (map[string]string, error) {
 	var result map[string]string
 

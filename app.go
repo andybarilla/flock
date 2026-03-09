@@ -92,6 +92,17 @@ func (a *App) RemoveSite(domain string) error {
 	return a.core.RemoveSite(domain)
 }
 
+// UpdateSite updates an existing site's configuration
+func (a *App) UpdateSite(domain, path, phpVersion, nodeVersion string, tls bool) error {
+	return a.core.UpdateSite(domain, registry.Site{
+		Path:        path,
+		Domain:      domain,
+		PHPVersion:  phpVersion,
+		NodeVersion: nodeVersion,
+		TLS:         tls,
+	})
+}
+
 // DatabaseServices returns status of all database services
 func (a *App) DatabaseServices() []databases.ServiceInfo {
 	return a.core.DatabaseServices()

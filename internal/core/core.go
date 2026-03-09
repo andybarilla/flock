@@ -131,12 +131,25 @@ func (c *Core) Sites() []registry.Site {
 	return c.registry.List()
 }
 
+func (c *Core) GetSite(domain string) (registry.Site, bool) {
+	return c.registry.Get(domain)
+}
+
 func (c *Core) AddSite(site registry.Site) error {
 	return c.registry.Add(site)
 }
 
 func (c *Core) RemoveSite(domain string) error {
 	return c.registry.Remove(domain)
+}
+
+func (c *Core) UpdateSite(domain string, updated registry.Site) error {
+	return c.registry.Update(domain, func(s *registry.Site) {
+		s.Path = updated.Path
+		s.PHPVersion = updated.PHPVersion
+		s.NodeVersion = updated.NodeVersion
+		s.TLS = updated.TLS
+	})
 }
 
 func (c *Core) Plugins() []plugin.PluginInfo {

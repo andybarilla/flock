@@ -64,6 +64,7 @@ Architecture design: `docs/plans/2026-03-03-rook-core-design.md`
 - [x] Site table: show Node Version column — See: docs/plans/2026-03-04-add-site-form-improvements-design.md
 - [x] Empty state improvements (actionable guidance for sites and services) — See: docs/plans/2026-03-04-empty-state-improvements-design.md
 - [x] Accessibility (color contrast, keyboard shortcuts) — See: docs/plans/2026-03-05-accessibility-design.md
+- [x] Site edit functionality (edit button, reused form, CLI command) — See: docs/plans/2026-03-08-site-edit-design.md
 
 ### Phase 5 — Runtime Management
 

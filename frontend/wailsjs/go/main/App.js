@@ -45,3 +45,7 @@ export function StartDatabase(arg1) {
 export function StopDatabase(arg1) {
   return window['go']['main']['App']['StopDatabase'](arg1);
 }
+
+export function UpdateSite(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['UpdateSite'](arg1, arg2, arg3, arg4, arg5);
+}

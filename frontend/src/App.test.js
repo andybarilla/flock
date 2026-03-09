@@ -5,6 +5,7 @@ vi.mock('../wailsjs/go/main/App.js', () => ({
   ListSites: vi.fn().mockResolvedValue([]),
   AddSite: vi.fn().mockResolvedValue(undefined),
   RemoveSite: vi.fn().mockResolvedValue(undefined),
+  UpdateSite: vi.fn().mockResolvedValue(undefined),
   DatabaseServices: vi.fn().mockResolvedValue([]),
   StartDatabase: vi.fn().mockResolvedValue(undefined),
   StopDatabase: vi.fn().mockResolvedValue(undefined),
@@ -168,5 +169,29 @@ describe('integration', () => {
     await vi.waitFor(() => {
       expect(getByRole('checkbox', { name: /dark mode/i })).toBeTruthy();
     });
+  });
+});
+
+describe('edit site', () => {
+  it('opens edit form when edit button is clicked in SiteList', async () => {
+    const { ListSites } = await import('../wailsjs/go/main/App.js');
+    ListSites.mockResolvedValue([
+      { domain: 'app.test', path: '/tmp/app', php_version: '8.3', node_version: '', tls: true },
+    ]);
+    vi.useFakeTimers();
+    const { container } = render(App);
+    await vi.waitFor(() => {
+      expect(container.querySelector('[title="Edit site"]')).toBeTruthy();
+    });
+    const editBtn = container.querySelector('[title="Edit site"]');
+    await fireEvent.click(editBtn);
+    vi.runAllTimers();
+    await vi.waitFor(() => {
+      const modal = container.querySelector('.modal');
+      expect(modal).toBeTruthy();
+      const title = container.querySelector('#add-site-title');
+      expect(title.textContent).toBe('Edit Site');
+    });
+    vi.useRealTimers();
   });
 });

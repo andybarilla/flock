@@ -25,3 +25,5 @@ export function SelectDirectory():Promise<string>;
 export function StartDatabase(arg1:string):Promise<void>;
 
 export function StopDatabase(arg1:string):Promise<void>;
+
+export function UpdateSite(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean):Promise<void>;

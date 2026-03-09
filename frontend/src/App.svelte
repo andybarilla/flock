@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ListSites, AddSite, RemoveSite, DatabaseServices, StartDatabase, StopDatabase, CheckRuntimes, InstallRuntime, MiseStatus } from '../wailsjs/go/main/App.js';
+  import { ListSites, AddSite, RemoveSite, UpdateSite, DatabaseServices, StartDatabase, StopDatabase, CheckRuntimes, InstallRuntime, MiseStatus } from '../wailsjs/go/main/App.js';
   import { notifySuccess, notifyError, dismissLatest } from './lib/notifications.js';
   import { friendlyError } from './lib/errorMessages.js';
   import { initTheme } from './lib/theme.js';
@@ -19,11 +19,13 @@
   let activeTab = 'sites';
   let runtimeStatuses = [];
   let miseAvailable = false;
+  let editingSite = null;
 
   function handleKeydown(e) {
     if (e.ctrlKey && e.key === 'n') {
       e.preventDefault();
       activeTab = 'sites';
+      editingSite = null;
       addFormOpen = true;
       setTimeout(() => addSiteForm?.focusPathInput(), 0);
       return;
@@ -38,6 +40,7 @@
     if (e.key === 'Escape') {
       if (addFormOpen) {
         addFormOpen = false;
+        editingSite = null;
         return;
       }
       dismissLatest();
@@ -68,6 +71,22 @@
     } catch (e) {
       notifyError(friendlyError(e.message || String(e)));
     }
+  }
+
+  function handleEditSite(e) {
+    editingSite = e.detail;
+    addFormOpen = true;
+  }
+
+  async function handleUpdate(domain, path, phpVersion, nodeVersion, tls) {
+    await UpdateSite(domain, path, phpVersion, nodeVersion, tls);
+    await refreshSites();
+    await refreshRuntimes();
+  }
+
+  function handleFormClose() {
+    addFormOpen = false;
+    editingSite = null;
   }
 
   async function refreshServices() {
@@ -150,8 +169,8 @@
   <div class="flex-1 overflow-auto">
     <div class="max-w-5xl mx-auto px-6 py-6">
       {#if activeTab === 'sites'}
-        <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} {runtimeStatuses} {miseAvailable} onInstall={handleInstall} on:addsite={() => { addFormOpen = true; }} />
-        <AddSiteForm bind:this={addSiteForm} onAdd={handleAdd} open={addFormOpen} on:close={() => { addFormOpen = false; }} />
+        <SiteList {sites} loaded={sitesLoaded} onRemove={handleRemove} {runtimeStatuses} {miseAvailable} onInstall={handleInstall} on:addsite={() => { editingSite = null; addFormOpen = true; }} on:editsite={handleEditSite} />
+        <AddSiteForm bind:this={addSiteForm} onAdd={handleAdd} onUpdate={handleUpdate} {editingSite} open={addFormOpen} on:close={handleFormClose} />
       {:else if activeTab === 'services'}
         <ServiceList {services} loaded={servicesLoaded} onStart={handleStartService} onStop={handleStopService} />
       {:else if activeTab === 'settings'}

@@ -61,6 +61,22 @@ describe('SiteCard', () => {
     expect(queryByText(/Node/)).toBeNull();
   });
 
+  it('renders edit button', () => {
+    const { getByTitle } = render(SiteCard, {
+      props: { site: mockSite, onRemove: vi.fn() },
+    });
+    expect(getByTitle('Edit site')).toBeTruthy();
+  });
+
+  it('calls onEdit with site when edit button is clicked', async () => {
+    const onEdit = vi.fn();
+    const { getByTitle } = render(SiteCard, {
+      props: { site: mockSite, onRemove: vi.fn(), onEdit },
+    });
+    await fireEvent.click(getByTitle('Edit site'));
+    expect(onEdit).toHaveBeenCalledWith(mockSite);
+  });
+
   describe('runtime warnings', () => {
     it('shows warning badge when runtime is not installed', () => {
       const { getByText } = render(SiteCard, {

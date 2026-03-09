@@ -23,12 +23,21 @@
 
   $: isEditing = !!editingSite;
 
-  $: if (editingSite && open) {
-    path = editingSite.path || '';
-    domain = editingSite.domain || '';
-    phpVersion = editingSite.php_version || '';
-    nodeVersion = editingSite.node_version || '';
-    tls = editingSite.tls || false;
+  $: if (open) {
+    if (editingSite) {
+      path = editingSite.path || '';
+      domain = editingSite.domain || '';
+      phpVersion = editingSite.php_version || '';
+      nodeVersion = editingSite.node_version || '';
+      tls = editingSite.tls || false;
+    } else {
+      path = '';
+      domain = '';
+      phpVersion = '';
+      nodeVersion = '';
+      tls = false;
+      detectedSource = '';
+    }
   }
 
   $: if (open && pathInput) {

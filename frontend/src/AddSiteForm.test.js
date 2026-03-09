@@ -246,6 +246,17 @@ describe('AddSiteForm', () => {
       expect(getByText('Update Site')).toBeTruthy();
     });
 
+    it('clears fields when switching from edit mode to add mode', async () => {
+      const { container, component } = render(AddSiteForm, {
+        props: { open: true, editingSite: editSite },
+      });
+      const pathInput = container.querySelector('input[placeholder="/home/user/projects/myapp"]');
+      expect(pathInput.value).toBe('/home/user/app');
+      // Switch to add mode
+      await component.$set({ editingSite: null });
+      expect(pathInput.value).toBe('');
+    });
+
     it('calls onUpdate instead of onAdd when submitting', async () => {
       const onUpdate = vi.fn().mockResolvedValue(undefined);
       const { container, component } = render(AddSiteForm, {

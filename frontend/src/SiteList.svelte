@@ -174,7 +174,7 @@
 {:else}
   <div data-testid="site-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {#each filtered as site}
-      <SiteCard {site} onRemove={requestRemove} {runtimeStatuses} {miseAvailable} {onInstall} />
+      <SiteCard {site} onRemove={requestRemove} onEdit={(s) => dispatch('editsite', s)} {runtimeStatuses} {miseAvailable} {onInstall} />
     {/each}
   </div>
 {/if}

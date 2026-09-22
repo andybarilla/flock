@@ -97,3 +97,4 @@ See [ROADMAP.md](ROADMAP.md).
 
 - [Operating model](docs/operating-model.md)
 - [Porting notes](docs/porting-notes.md)
+- [v0.1 dogfood checklist](docs/dogfood-checklist.md)

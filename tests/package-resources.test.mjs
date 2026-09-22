@@ -356,6 +356,16 @@ test("operator herdr worker dispatch is gated, fail-stop, and independently veri
 	assert.match(operatorRunSkill, /gh pr list --state open --head <branch>/);
 	assert.match(operatorRunSkill, /reviewDecision/);
 
+	// Review fixes: mutation gate carve-out, supervisor-observed review, early
+	// provenance marker, and defined agent-start failure handling.
+	assert.match(
+		operatorRunSkill,
+		/must dispatch through the `issue-loop` workflow with `--yes --limit 1`, or through the section 5a Herdr worker dispatch when it is active/,
+	);
+	assert.match(operatorRunSkill, /the supervisor dispatches a fresh `pr-review` for the PR from its own session/);
+	assert.match(operatorRunSkill, /before the validation and review legs/);
+	assert.match(operatorRunSkill, /Any `herdr agent start` failure/);
+
 	// Run log records agent, pane/workspace IDs, worktree path, and verification.
 	assert.match(operatorRunSkill, /Herdr dispatch: <enabled\|disabled/);
 	assert.match(operatorRunSkill, /agent=<issue-<n>\|none>/);

@@ -107,7 +107,7 @@ For mutating one-shot or loop mode, require either `--yes` with an auto-approved
 
 Policy category checks:
 
-- ready issue work requires `Issue selection for queued work` and must dispatch through the `issue-loop` workflow with `--yes --limit 1`
+- ready issue work requires `Issue selection for queued work` and must dispatch through the `issue-loop` workflow with `--yes --limit 1`, or through the section 5a Herdr worker dispatch when it is active
 - triage requires `Triage labels/comments` and must dispatch through the `triage` workflow with a limit of one issue unless project policy/user limits are lower
 - grooming requires `Grooming labels/comments` and must dispatch through the `groom` workflow for one bounded batch unless project policy/user limits are lower
 - PR review must dispatch through the `pr-review` workflow for one PR, or `ic-review` only when reviewing a local diff; review must not merge
@@ -171,7 +171,7 @@ For each selected issue:
    herdr agent start issue-<n> --kind pi --pane <pane-id>
    ```
 
-   On `agent_not_ready` (including a block detected during startup), stop with `worker not ready`. Never answer or dismiss the nested agent's approval or question UI with `send-keys`, and never start a second agent for the same issue.
+   Any `herdr agent start` failure — `agent_not_ready` (including a block detected during startup), a command error, or an agent name collision left over from a prior stopped run — stops the run with `worker not ready`; never retry the start, and never start a second agent for the same issue. Never answer or dismiss the nested agent's approval or question UI with `send-keys`.
 
 3. Submit the worker brief and wait, bounded by the per-issue worker timeout from project config (further bounded by remaining max runtime):
 
@@ -200,11 +200,11 @@ The nested worker writes its final handoff to `<worktree-root>/.flock/handoff-is
 The supervisor never records worker claims from the handoff alone. Before recording branch, PR, validation, or review verdict in the run log, re-verify each from the operator's own session:
 
 - Branch: `git ls-remote --heads origin <branch>` (or `gh api repos/<owner>/<repo>/branches/<branch> --jq .name`) shows the issue branch exists on the remote.
-- PR: `gh pr list --state open --head <branch> --json number,url,headRefName,baseRefName,author` shows an open PR from the issue branch to the default branch authored by the authenticated account; then `gh pr view <number> --json state,mergeable,reviewDecision`.
+- PR: `gh pr list --state open --head <branch> --json number,url,headRefName,baseRefName,author` shows an open PR from the issue branch to the default branch authored by the authenticated account; then `gh pr view <number> --json state,mergeable,reviewDecision`. Once the PR is verified, immediately record the section 6 provenance marker on it — before the validation and review legs — so a stopped run never strands an unmarked operator PR.
 - Validation: re-run the configured gate command (for example `npm run check`) in the worktree path and observe the output; also confirm `git -C <worktree> status --short` shows no unexpected uncommitted files (the handoff file excepted) and `git -C <worktree> log --oneline origin/<default>..HEAD` shows the work committed on the issue branch.
-- Review verdict: the handoff must contain a review verdict from an observed `pr-review` or `ic-review` run; cross-check `gh pr view <number> --json reviewDecision`. A `CHANGES_REQUESTED` decision overrides any claimed non-blocking verdict and stops the run with `review blocking`; absent review evidence means review did not run, so stop with `review cannot run`.
+- Review verdict: never record the worker's claimed verdict from the handoff. Flock `pr-review`/`ic-review` verdicts are returned to the session and never submitted as GitHub reviews, so `reviewDecision` is normally empty and cannot verify a claim. Instead, the supervisor dispatches a fresh `pr-review` for the PR from its own session (as on resume in section 2) and observes the verdict directly; a blocking verdict stops the run with `review blocking`. A `CHANGES_REQUESTED` from `gh pr view <number> --json reviewDecision` also stops the run with `review blocking`, and if the supervisor's review cannot run, stop with `review cannot run`. The handoff's claimed verdict is cross-check evidence only: it must match the supervisor-observed verdict, and a mismatch stops with `worker claim mismatch`.
 
-A claim that fails re-verification stops the run with `worker claim mismatch`, reporting the observed divergence. Only after all four checks pass does the cycle count as a completed issue workflow: record the provenance marker (section 6), run the merge step when applicable, and evaluate the loop continuation gate.
+A claim that fails re-verification stops the run with `worker claim mismatch`, reporting the observed divergence. Only after all checks pass does the cycle count as a completed issue workflow: run the merge step when applicable, and evaluate the loop continuation gate.
 
 ## 6. Merge step after a completed issue cycle
 
@@ -215,9 +215,9 @@ Preconditions — all must hold before any merge command:
 1. the PR number was observed from the delegated workflow's output in this run, from the supervisor's independent Herdr-dispatch verification (section 5a), or the PR was selected via the section 2 resume criteria; never merge a PR that is neither run-opened nor a qualified resume target
 2. project config contains a conditional `Merge` approval policy that allows merge
 3. project config records a verified check-wait command; without it, report the PR state and stop for a human merge
-4. review evidence is non-blocking: the delegated workflow reported non-blocking review this run, or — on resume — a fresh `pr-review` dispatch for the PR returned a non-blocking verdict in this run; a blocking verdict stops the run
+4. review evidence is non-blocking: the delegated workflow reported non-blocking review this run, the supervisor observed a non-blocking `pr-review` verdict under section 5a Herdr dispatch this run, or — on resume — a fresh `pr-review` dispatch for the PR returned a non-blocking verdict in this run; a blocking verdict stops the run
 
-When the delegated workflow reports an opened PR, immediately record provenance so a later stopped run can recognize it:
+When the delegated workflow reports an opened PR, immediately record provenance so a later stopped run can recognize it (under Herdr dispatch, the section 5a PR verification leg records it before the validation and review legs):
 
 ```bash
 gh pr comment <number> --body 'flock-operator-run: opened by the Flock operator; eligible for conditional operator merge.'

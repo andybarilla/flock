@@ -373,6 +373,15 @@ test("operator herdr worker dispatch is gated, fail-stop, and independently veri
 	assert.match(operatorRunSkill, /exactly one issue per cycle/);
 	assert.match(operatorRunSkill, /post it once/);
 
+	// Round-3 review fixes: summary resume criteria include the validation leg,
+	// the gate re-run certifies the pushed PR head (sha equality), and the
+	// marker dedupe guard checks marker authorship.
+	assert.match(operatorRunSkill, /the configured gate command re-run against the PR head passed in the resuming run/);
+	assert.match(projectConfig, /the configured gate command re-run against the PR head passed in the resuming run/);
+	assert.match(operatorRunSkill, /rev-parse HEAD/);
+	assert.match(operatorRunSkill, /headRefOid/);
+	assert.match(operatorRunSkill, /marker comment authored by the authenticated account is already present/);
+
 	// Run log records agent, pane/workspace IDs, worktree path, and verification.
 	assert.match(operatorRunSkill, /Herdr dispatch: <enabled\|disabled/);
 	assert.match(operatorRunSkill, /agent=<issue-<n>\|none>/);

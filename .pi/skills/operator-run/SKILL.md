@@ -1,30 +1,33 @@
 ---
 name: operator-run
-description: Runs one bounded Flock operator decision cycle, either read-only or one mutating action when project policy explicitly allows it.
+description: Runs a bounded Flock operator cycle or multi-step loop, either read-only or mutating only when project policy explicitly allows it.
 ---
 
 # Operator Run
 
-Run exactly one bounded Flock operator decision cycle.
+Run a bounded Flock operator decision cycle or bounded multi-step loop.
 
-The operator is an orchestrator. It inspects repository state, chooses at most one safe next action, delegates to the existing Flock workflow for that action, summarizes the result, and stops. It must not merge, bypass validation, bypass review, or relax the safety defaults of `/work`, `/groom`, `/triage`, `/issue`, or review workflows outside this operator run.
+The operator is an orchestrator. It inspects repository state, chooses safe next actions, delegates each action to the existing Flock workflow, records the observed result, and stops when limits or safety conditions require human judgment. It must not merge, bypass validation, bypass review, or relax the safety defaults of `/work`, `/groom`, `/triage`, `/issue`, or review workflows.
 
 ## Inputs
 
 Parse user arguments for:
 
 - `--dry-run` or `--plan`: read-only planning only
-- `--yes`: opt into mutating one-shot automation when project policy permits the selected action
-- `--max-issues <n>`: maximum ready issues the operator may dispatch in this run; for one-shot v1, use at most `1` even when higher
-- `--max-groom-batches <n>`: maximum grooming batches allowed in this run; for one-shot v1, use at most `1` even when higher
-- `--max-triage-issues <n>`: maximum triage issues allowed in this run; for one-shot v1, use at most `1` even when higher
+- `--loop`: repeat safe one-cycle dispatches until a limit or stop condition is reached
+- `--yes`: opt into mutating automation when project policy permits each selected action
+- `--max-cycles <n>`: maximum operator cycles in this run; default to project config, or `1` outside loop mode
+- `--max-issues <n>`: max issues worked in this run
+- `--max-groom-batches <n>`: max grooming batches in this run
+- `--max-triage-issues <n>`: max triage issues in this run
+- `--max-runtime <duration>`: max wall-clock runtime, such as `10m`; require an explicit value for loop mode unless project config supplies one
 - `--label <label>`: ready issue label, default `ready-for-agent`
 
 If parsing is ambiguous, ask before any mutation.
 
 ## 1. Preflight and project policy
 
-Inspect the repository and tracker:
+Inspect the repository and tracker before every cycle:
 
 ```bash
 git rev-parse --show-toplevel
@@ -34,18 +37,18 @@ git branch --show-current
 test -f docs/flock/project.md && echo present || echo absent
 ```
 
-If the worktree is dirty, stop before mutation and report the dirty worktree. Dry-run may still report the dirty state as a blocker.
+If the worktree is dirty before dispatch, stop before mutation and report the dirty worktree. Dry-run may still report the dirty state as a blocker.
 
-Before taking any mutating action, read `docs/flock/project.md` completely. One-shot mutation requires both:
+Before taking any mutating action, read `docs/flock/project.md` completely. One-shot and loop mutation require both:
 
 1. project config exists, and
-2. the config contains an `Operator Approval Policy` section that explicitly allows the selected approval category.
+2. the config contains an `Operator Approval Policy` section that explicitly allows the selected approval category and limits.
 
-When project config or approval policy is missing, dry-run planning is allowed but mutating one-shot mode must fail with a clear stop reason. Do not infer approval from labels alone.
+When project config or approval policy is missing, dry-run planning is allowed but mutating one-shot or loop mode must fail with a clear stop reason. Do not infer approval from labels alone.
 
 ## 2. Read-only decision pass
 
-Gather enough state to choose one next action without mutating:
+Gather enough state to choose the next action without mutating:
 
 ```bash
 gh issue list --state open --label ready-for-agent --json number,title,labels,updatedAt,url --limit 50
@@ -54,18 +57,18 @@ gh issue list --state open --json number,title,labels,updatedAt,url --limit 50
 gh pr list --state open --json number,title,url,headRefName,baseRefName,reviewDecision,statusCheckRollup --limit 20
 ```
 
-If the configured labels differ from the defaults, use the labels from `docs/flock/project.md`.
+If configured labels differ from defaults, use the labels from `docs/flock/project.md`.
 
-Recommended action priority for one-shot v1:
+Recommended action priority:
 
 1. stop on dirty worktree, auth failure, missing required commands, or unexpected branch state
-2. dispatch one ready issue when ready issues exist and issue selection for queued work is allowed
-3. triage one `needs-triage` issue when triage labels/comments are allowed and the triage limit permits it
-4. groom one bounded batch when grooming labels/comments are allowed and the grooming limit permits it
-5. route to PR review when review is clearly the safest next action
-6. stop with no safe action
+2. stop or route to review when review is blocking, review cannot run, or review is clearly the safest bottleneck
+3. dispatch one ready issue when ready issues exist and issue selection for queued work is allowed
+4. triage one `needs-triage` issue when triage labels/comments are allowed and the triage limit permits it
+5. groom one bounded batch when grooming labels/comments are allowed and the grooming limit permits it
+6. stop when the queue is empty or no safe action exists
 
-This priority is a routing default only. Stop and ask if the safest action is ambiguous.
+This priority is a routing default only. Stop and ask if the safest action is ambiguous or issue scope is unclear.
 
 ## 3. Dry-run output
 
@@ -95,9 +98,9 @@ Stop reason: dry-run plan completed
 
 Do not claim validation, review, tracker changes, or completion in dry-run mode.
 
-## 4. One-shot mutation gate
+## 4. Mutation gate
 
-For one-shot mutation, require either `--yes` with an auto-approved policy category or an explicit human confirmation for an ask-approved policy category. Without `--yes`, show the selected action, why it was selected, the policy category that must allow it, and ask the user before dispatching when policy permits asking.
+For mutating one-shot or loop mode, require either `--yes` with an auto-approved policy category or an explicit human confirmation for an ask-approved policy category. Without `--yes`, show the selected action, why it was selected, the policy category that must allow it, the remaining limits, and ask the user before dispatching when policy permits asking.
 
 Policy category checks:
 
@@ -112,11 +115,11 @@ Interpret the selected approval policy category explicitly:
 - `ask` or equivalent confirmation language permits dispatch only after the operator displays the selected action and receives explicit human confirmation; then pass `--yes` only to the delegated workflow so routine confirmations do not repeat
 - `never`, `blocked`, missing, unclear, or policy language that does not cover the selected action blocks mutation
 
-If the selected policy category exceeds configured limits, stop before mutation.
+If the selected policy category exceeds configured limits, stop before mutation. Loop mode must also have an explicit max cycles limit and max runtime limit from user arguments or project config.
 
-## 5. Dispatch exactly one workflow
+## 5. Dispatch exactly one workflow per cycle
 
-Dispatch exactly one underlying workflow and then stop. Do not implement, groom, triage, or review directly in this skill.
+Dispatch exactly one underlying workflow per cycle. Do not implement, groom, triage, or review directly in this skill.
 
 Examples:
 
@@ -135,16 +138,39 @@ Use the `groom` skill to groom the GitHub issue backlog for this repository.
 Arguments: --limit <configured batch size> --yes
 ```
 
-The delegated workflow owns its normal safety checks, validation, review, PR handling, and tracker completion rules. If it reports blocked or failed status, the operator must stop and report that result. Never continue to a second action in one-shot mode.
+The delegated workflow owns its normal safety checks, validation, review, PR handling, and tracker completion rules. If it reports blocked or failed status, the operator must stop and report that result. Never auto-merge.
 
-## 6. Final handoff
+## 6. Loop continuation gate
 
-Return a stage-by-stage summary. Mark each stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Do not claim validation, review, tracker changes, or tracker completion unless command output from the underlying workflow was observed.
+When `--loop` is set, repeat the one-cycle process only while all conditions remain safe:
+
+1. the prior delegated workflow succeeded without a blocking review, missing review, failed validation, unclear scope, failed tracker operation, or failed/blocked issue work
+2. observed output includes the validation result, review verdict, tracker changes, issue/PR references, and delegated stop reason when applicable
+3. counters remain under max cycles, max issues, max grooming batches, max triage issues, and max runtime
+4. the repository returns to the expected safe state for the next action
+5. project policy still allows the next selected action
+
+Before continuing to the next cycle, run:
+
+```bash
+git status --short
+git branch --show-current
+gh pr list --state open --json number,title,url,headRefName,baseRefName,reviewDecision,statusCheckRollup --limit 20
+```
+
+Stop instead of continuing when any of these occur: queue is empty, work is blocked, validation fails, review is blocking, review cannot run, issue scope is unclear, worktree is dirty, auth fails, branch state is unexpected, required commands fail, project config or approval policy is insufficient, or configured limits are reached.
+
+Do not continue after a failed or blocked issue in v1 unless project policy explicitly supports retries and the retry conditions are met. The default Flock retry policy is no retry.
+
+## 7. Final run log
+
+Return a stage-by-stage summary for one-shot mode, and a Final run log for loop mode. Mark each stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Do not claim validation, review, tracker changes, or tracker completion unless command output from the underlying workflow was observed.
 
 ```md
-Mode: <dry-run|one-shot>
+Mode: <dry-run|one-shot|loop>
 Repository: <owner/name>
 Project config: <found/missing and approval policy summary>
+Limits: <max cycles/issues/grooming/triage/runtime and observed counters>
 Chosen action: <work|triage|groom|review|stop|ask human>
 Delegated workflow: <issue-loop|triage|groom|pr-review|ic-review|none>
 Issue: #<number when available, or "none selected">
@@ -153,15 +179,19 @@ PR: <PR link when available, or "not opened">
 Validation: <observed result from delegated workflow, or "not run">
 Review verdict: <observed verdict from delegated workflow, or "not run">
 Tracker completion: <observed completion result from delegated workflow, or "not run">
+Tracker changes: <labels/comments/issues closed or "none observed">
+Cycle log:
+- Cycle <n>: action=<work|triage|groom|review|stop>; issue=<#number|none>; PR=<url|none>; validation=<observed|not run>; review=<verdict|not run>; tracker=<changes|none>; result=<succeeded|blocked|failed|stopped>
 Workflow summary:
 - Preflight: <succeeded|skipped|failed> — <observed result or stop reason>
 - Project policy gate: <succeeded|skipped|failed> — <observed result or stop reason>
 - Decision pass: <succeeded|skipped|failed> — <observed result or stop reason>
 - Dispatch: <succeeded|skipped|failed> — <delegated workflow result or stop reason>
+- Loop continuation gate: <succeeded|skipped|failed> — <observed safe state or stop reason>
 - Validation: <succeeded|skipped|failed> — <observed delegated result or not run>
 - Review: <succeeded|skipped|failed> — <observed delegated result or not run>
 - Tracker completion: <succeeded|skipped|failed> — <observed delegated result or not run>
-Stop reason: <completed one-shot action|dry-run plan completed|blocked|failed|no safe action|human confirmation required>
+Stop reason: <completed one-shot action|dry-run plan completed|queue empty|blocked|failed|review blocking|review cannot run|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
 Next recommended human action: <merge/review/fix/configure/run suggested command/no action>
 ```
 
@@ -169,8 +199,9 @@ Next recommended human action: <merge/review/fix/configure/run suggested command
 
 | Thought | Reality |
 |---|---|
-| "One-shot means one issue plus grooming." | One-shot means exactly one delegated workflow/action. |
+| "Loop means issue work can skip review until the end." | Each delegated issue workflow must preserve validation and review requirements before the loop can continue. |
 | "The project has ready issues, so mutation is approved." | Mutation also requires config and approval policy for the selected action. |
 | "I can implement the selected issue here." | Dispatch to `issue-loop`; underlying workflows own implementation. |
 | "The operator can merge after checks." | Never auto-merge. |
+| "A failed issue can be skipped so the loop keeps going." | Stop on failed or blocked issue in v1 unless explicit retry policy says otherwise. |
 | "Dry-run changed labels/comments because it was harmless." | Dry-run is strictly read-only. |

@@ -1,6 +1,6 @@
 # Bounded Flock operator workflow
 
-This document specifies the planned Flock operator: an extension-backed workflow for trusted repositories where issues are already well shaped and the maintainer wants Flock to coordinate routine `status -> groom -> triage -> work -> repeat` cycles with bounded approvals.
+This document specifies the Flock operator workflow for trusted repositories where issues are already well shaped and the maintainer wants Flock to coordinate routine `status -> groom -> triage -> work -> repeat` cycles with bounded approvals.
 
 The operator is not a fully autonomous software development agent. It is an orchestrator that launches existing Flock workflows, enforces repository policy, records what happened, and stops whenever human judgment is required.
 
@@ -22,16 +22,9 @@ The operator is not a fully autonomous software development agent. It is an orch
 
 ## Form factor
 
-The operator should be extension-backed rather than prompt-only.
+The current operator is exposed through `/operate` and the `operator-run` skill. It is prompt/skill-backed and delegates each cycle to existing Flock workflows while preserving their safety gates.
 
-Reasons:
-
-- The workflow needs durable run state, cycle limits, command execution, and structured logs.
-- It may be launched by another agent or an external supervisor rather than a human typing every command.
-- The extension can keep orchestration concerns separate from existing skills while still calling the skills' workflows.
-- Long or repeated loops are easier to bound and audit with explicit state than with a single prompt transcript.
-
-A prompt such as `/operate` can remain the human entry point, but the prompt should delegate orchestration to the operator extension.
+An extension-backed operator remains a possible later enhancement when Flock needs durable machine-readable run state or external supervisor integration beyond the transcript. The v1 loop still requires explicit limits, command observation, and a structured final run log.
 
 ## Operating modes
 
@@ -73,7 +66,7 @@ Examples of one-shot actions:
 
 ### Bounded loop
 
-Loop mode repeats one-shot cycles until a limit or stop condition is reached.
+Loop mode is available for trusted repositories. It repeats one-shot cycles until a limit or stop condition is reached.
 
 Required limits:
 
@@ -222,13 +215,13 @@ Next recommended human action: <merge/review/fix/configure/no action>
 
 The operator must not claim validation, review, tracker changes, or completion unless the underlying command output was observed.
 
-## First implementation slice
+## Implementation status
 
-Implement the work in this order:
+The current Flock package includes:
 
-1. Add project config approval policy support.
-2. Add a read-only dry-run operator that reports what it would do.
-3. Add one-shot mutating mode gated by project config policy.
-4. Add bounded loop mode after one-shot behavior is stable.
+1. project config approval policy support,
+2. a read-only dry-run operator plan,
+3. one-shot mutating mode gated by project config policy, and
+4. bounded loop mode gated by explicit limits and continuation checks.
 
 Dry-run is the only mode that may operate without project config. One-shot and loop modes must block until the repository has explicit operator policy.

@@ -69,7 +69,7 @@ Recommended action priority:
 6. groom one bounded batch when grooming labels/comments are allowed and the grooming limit permits it
 7. stop when the queue is empty or no safe action exists
 
-Resume criteria — an open PR is a resume target only when all of these are observed: its head branch matches the configured issue branch pattern, its author is the authenticated account (`gh api user --jq .login`), its linked issue is open, and project config allows conditional merge. On resume, run the section 6 merge step; do not redispatch the issue. A PR failing any criterion is not a resume target: never merge it, and ask a human when ownership is ambiguous.
+Resume criteria — an open PR is a resume target only when all of these are observed: its head branch matches the configured issue branch pattern, its author is the authenticated account (`gh api user --jq .login`), its linked issue is open, it carries the `flock-operator-run` provenance marker comment (observed via `gh pr view <number> --comments`), and project config allows conditional merge. Branch shape and authorship alone never qualify a PR: the authenticated account is usually the maintainer's own, so without the provenance marker the PR stays human-merged. On resume, first dispatch the `pr-review` workflow for the PR — a fresh non-blocking verdict re-establishes review evidence, and a blocking verdict stops the run. Then run the section 6 merge step; do not redispatch the issue. A PR failing any criterion is not a resume target: never merge it, and ask a human when ownership is ambiguous.
 
 This priority is a routing default only. Stop and ask if the safest action is ambiguous or issue scope is unclear.
 
@@ -111,7 +111,7 @@ Policy category checks:
 - triage requires `Triage labels/comments` and must dispatch through the `triage` workflow with a limit of one issue unless project policy/user limits are lower
 - grooming requires `Grooming labels/comments` and must dispatch through the `groom` workflow for one bounded batch unless project policy/user limits are lower
 - PR review must dispatch through the `pr-review` workflow for one PR, or `ic-review` only when reviewing a local diff; review must not merge
-- merge requires the `Merge` policy category and is allowed only as a squash merge of a green PR opened by the operator in the current run. Green means, all observed from `gh` output: every `statusCheckRollup` entry successful (none pending or failing), `mergeable: MERGEABLE`, Flock review verdict non-blocking, and `reviewDecision: APPROVED` when required by branch protection (not required otherwise). The operator polls up to the configured max PR wait and stops with reason "PR not green" on timeout; it never waits indefinitely. Merge execution additionally requires the verified check-wait command recorded in project config; without it, the operator reports the PR state and stops for a human merge. Failing checks, merge conflicts, blocking review, missing/insufficient Merge policy, or any PR not opened by this run each stop the run before any merge command. The issue is closed completed only after the merge is verified on the default branch.
+- merge requires the `Merge` policy category and is allowed only as a squash merge of a green PR opened by the operator in the current run, or of a green PR meeting the section 2 resume criteria (provenance marker observed, fresh non-blocking `pr-review` verdict in the resuming run). Green means, all observed from `gh` output: every `statusCheckRollup` entry successful (none pending or failing), `mergeable: MERGEABLE`, Flock review verdict non-blocking, and `reviewDecision: APPROVED` when required by branch protection (not required otherwise). The operator polls up to the configured max PR wait and stops with reason "PR not green" on timeout; it never waits indefinitely. Merge execution additionally requires the verified check-wait command recorded in project config; without it, the operator reports the PR state and stops for a human merge. Failing checks, merge conflicts, blocking review, missing/insufficient Merge policy, or any PR that is neither run-opened nor a qualified resume target each stop the run before any merge command. The issue is closed completed only after the merge is verified on the default branch.
 
 Interpret the selected approval policy category explicitly:
 
@@ -146,14 +146,22 @@ The delegated workflow owns its normal safety checks, validation, review, PR han
 
 ## 6. Merge step after a completed issue cycle
 
-Run this step when a delegated issue workflow completed with a PR opened in the current run. Skip it for triage, grooming, and review cycles.
+Run this step when a delegated issue workflow completed with a PR opened in the current run, or when a cycle resumes a prior run's PR per the section 2 resume criteria. Skip it for triage, grooming, and review cycles.
 
 Preconditions — all must hold before any merge command:
 
-1. the PR number was observed from the delegated workflow's output in this run; never merge a PR the operator did not open this run
+1. the PR number was observed from the delegated workflow's output in this run, or the PR was selected via the section 2 resume criteria; never merge a PR that is neither run-opened nor a qualified resume target
 2. project config contains a conditional `Merge` approval policy that allows merge
 3. project config records a verified check-wait command; without it, report the PR state and stop for a human merge
-4. the delegated workflow reported non-blocking review; a blocking verdict stops the run
+4. review evidence is non-blocking: the delegated workflow reported non-blocking review this run, or — on resume — a fresh `pr-review` dispatch for the PR returned a non-blocking verdict in this run; a blocking verdict stops the run
+
+When the delegated workflow reports an opened PR, immediately record provenance so a later stopped run can recognize it:
+
+```bash
+gh pr comment <number> --body 'flock-operator-run: opened by the Flock operator; eligible for conditional operator merge.'
+```
+
+Resume targets must carry this marker (section 2); a PR without it is never merged by the operator.
 
 ### Check-wait command
 
@@ -206,12 +214,13 @@ Before continuing to the next cycle, run:
 ```bash
 git status --short
 git branch --show-current
+git fetch origin
 git pull --ff-only
-git rev-parse HEAD origin/HEAD
+git rev-parse HEAD origin/<default-branch>
 gh pr list --state open --json number,title,url,headRefName,baseRefName,reviewDecision,statusCheckRollup --limit 20
 ```
 
-Confirm from the output: the worktree is clean, the current branch is the default branch, local HEAD matches origin, and no open PR head branch matches an issue branch from this run.
+Confirm from the output: the worktree is clean, the current branch is the default branch from project config, local HEAD matches `origin/<default-branch>`, and no open PR head branch matches an issue branch from this run. If the run has more open PRs than the list limit, raise the limit so a run PR cannot be windowed out.
 
 Stop instead of continuing when any of these occur: queue is empty, work is blocked, validation fails, review is blocking, review cannot run, a merge stop reason occurred, issue scope is unclear, worktree is dirty, auth fails, branch state is unexpected, required commands fail, project config or approval policy is insufficient, or configured limits are reached.
 
@@ -219,7 +228,7 @@ Do not continue after a failed or blocked issue in v1 unless project policy expl
 
 ## 8. Final run log
 
-Return a stage-by-stage summary for one-shot mode, and a Final run log for loop mode. Mark each stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Do not claim validation, review, tracker changes, or tracker completion unless command output from the underlying workflow was observed.
+Return a stage-by-stage summary for one-shot mode, and a Final run log for loop mode. Mark each stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Do not claim validation, review, tracker changes, or tracker completion unless command output from the underlying workflow was observed. A resume cycle (`action=resume`) counts toward max cycles and max issues like a work cycle.
 
 ```md
 Mode: <dry-run|one-shot|loop>
@@ -237,7 +246,7 @@ Merge verdict: <merged and verified|PR not green|checks failing|merge conflict|r
 Tracker completion: <observed completion result from delegated workflow or post-merge close, or "not run">
 Tracker changes: <labels/comments/issues closed or "none observed">
 Cycle log:
-- Cycle <n>: action=<work|triage|groom|review|stop>; issue=<#number|none>; PR=<url|none>; validation=<observed|not run>; review=<verdict|not run>; merge=<merged|not green|failed|not run>; tracker=<changes|none>; continue=<yes|no: reason>; result=<succeeded|blocked|failed|stopped>
+- Cycle <n>: action=<work|resume|triage|groom|review|stop>; issue=<#number|none>; PR=<url|none>; validation=<observed|not run>; review=<verdict|not run>; merge=<merged|not green|failed|not run>; tracker=<changes|none>; continue=<yes|no: reason>; result=<succeeded|blocked|failed|stopped>
 Workflow summary:
 - Preflight: <succeeded|skipped|failed> — <observed result or stop reason>
 - Project policy gate: <succeeded|skipped|failed> — <observed result or stop reason>
@@ -259,6 +268,6 @@ Next recommended human action: <merge/review/fix/configure/run suggested command
 | "Loop means issue work can skip review until the end." | Each delegated issue workflow must preserve validation and review requirements before the loop can continue. |
 | "The project has ready issues, so mutation is approved." | Mutation also requires config and approval policy for the selected action. |
 | "I can implement the selected issue here." | Dispatch to `issue-loop`; underlying workflows own implementation. |
-| "The operator can merge once checks look fine." | Merge only under an explicit conditional Merge policy: squash, green per the observed definition, run-opened PRs only, verified before issue close. Everything else stops for a human. |
+| "The operator can merge once checks look fine." | Merge only under an explicit conditional Merge policy: squash, green per the observed definition, run-opened or qualified resume-target PRs only, verified before issue close. Everything else stops for a human. |
 | "A failed issue can be skipped so the loop keeps going." | Stop on failed or blocked issue in v1 unless explicit retry policy says otherwise. |
 | "Dry-run changed labels/comments because it was harmless." | Dry-run is strictly read-only. |

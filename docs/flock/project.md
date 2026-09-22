@@ -139,7 +139,7 @@ Policy: conditional operator merge
 
 Notes:
 - The operator may squash-merge a pull request only when all of the following are observed from `gh` output: every `statusCheckRollup` entry successful (none pending or failing), `mergeable: MERGEABLE` (no conflicts), Flock review verdict non-blocking, and `reviewDecision: APPROVED` when required by branch protection (not required otherwise).
-- Merge scope: only PRs opened by the operator in the current run. All other PRs remain human-merged.
+- Merge scope: PRs opened by the operator in the current run, or PRs meeting the documented resume criteria — head branch matches the issue branch pattern, the `flock-operator-run` provenance marker comment is observed on the PR, the linked issue is open, and a fresh `pr-review` verdict in the resuming run is non-blocking. All other PRs remain human-merged.
 - Merge method: squash. Flock never deletes branches; the GitHub auto-delete-on-merge setting handles branch cleanup.
 - The operator polls for green up to `Max PR wait` and stops cleanly with reason "PR not green" on timeout, leaving a resumable handoff. It never waits indefinitely.
 - Merge without this policy section, or of any PR failing a green criterion, is refused.
@@ -192,7 +192,7 @@ Approval categories:
 - Commits: auto-approve scoped commits on the issue branch after validation has been run.
 - PR creation/update: auto-approve PR creation or updates using neutral `Refs #<number>` references.
 - Tracker completion/issue close: auto-approve only through the issue worker completion policy after verified merge of the issue's PR on `main`.
-- Merge: auto-approve squash merge of PRs opened by the operator in the current run when green per the Merge policy above; all other PRs remain human-merged.
+- Merge: auto-approve squash merge of PRs opened by the operator in the current run, or meeting the documented resume criteria, when green per the Merge policy above; all other PRs remain human-merged.
 
 Limits:
 - Max cycles per operator run: 5

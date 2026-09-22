@@ -89,7 +89,7 @@ When present, `docs/flock/project.md` is the repository-specific contract for Fl
 
 Use `/project-config` to create or check it. When absent, workflows use conservative defaults and should mention that a project config would make them repo-specific.
 
-The planned bounded operator workflow is specified in [Bounded Flock operator workflow](operator-workflow.md). Mutating operator modes require explicit project config approval policy; dry-run planning is the only operator mode that may run without project config.
+The bounded operator workflow is specified in [Bounded Flock operator workflow](operator-workflow.md). Mutating operator modes require explicit project config approval policy; dry-run planning is the only operator mode that may run without project config.
 
 ## Safety rules
 

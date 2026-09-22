@@ -109,9 +109,13 @@ Successful handoff means the issue worker returned:
 Issue:
 Branch:
 PR:
+Validation:
+Review verdict:
+Workflow summary:
 Changed:
 Verified:
 Review:
+Next recommended human action:
 Left out:
 Unsure about:
 ```
@@ -122,7 +126,7 @@ Blocked handoff begins with:
 BLOCKED:
 ```
 
-If blocked or failed, stop the loop and report the issue and reason. Do not continue to the next issue in v1.
+If blocked or failed, stop the loop and report the issue and reason. Do not continue to the next issue in v1. The final report must copy or condense the issue worker's stage statuses; do not invent validation or review results.
 
 If successful, append a one-line run summary:
 
@@ -153,14 +157,26 @@ If the prior issue left an open branch with committed work or an open PR, decide
 
 ## 7. Final report
 
-Return:
+Return a final stage-by-stage summary. Mark every stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Include the issue number, branch name when available, PR link when available, validation result, review verdict, and next recommended human action. Do not claim validation or review occurred unless command output was observed; copy or condense the issue worker's stage statuses when an issue was dispatched.
 
 ```md
 Processed: <count>
 Stopped because: <reason>
+Issue: #<number or "none selected">
+Branch: <branch name when available, or "not created">
+PR: <PR link when available, or "not opened">
+Validation: <validation result from observed command output, or "not run">
+Review verdict: <review verdict from observed review output, or "not run">
+Workflow summary:
+- Issue selection: <succeeded|skipped|failed> — <observed result or stop reason>
+- Branch setup: <succeeded|skipped|failed> — <observed result or stop reason>
+- Implementation: <succeeded|skipped|failed> — <observed result or stop reason>
+- Validation: <succeeded|skipped|failed> — <observed result or stop reason>
+- PR creation/update: <succeeded|skipped|failed> — <observed result or stop reason>
+- Review: <succeeded|skipped|failed> — <observed result or stop reason>
 Summary:
 - #<number>: <PR or branch> — <result>
-Next:
+Next recommended human action:
 - <recommended next action>
 ```
 

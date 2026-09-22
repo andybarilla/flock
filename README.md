@@ -49,15 +49,29 @@ Extension:
 
 - `.pi/extensions/flock-subagent` — registers the `subagent` tool, adapted from pi's subagent example
 
-## Starting with Flock
+## First run: the happy path
 
-Start with the read-only status command:
+Start every new repository session with the read-only status command:
 
 ```text
 /flock-status
 ```
 
-It checks repo/Flock readiness and recommends the next command. Use `/scout-and-plan "<small repo question>"` later when status identifies an unclear area that needs deeper read-only reconnaissance and planning. `/implement` and `/implement-and-review` continue into the mutating `ic-dev` workflow, so save those for tasks where edits are expected.
+`/flock-status` checks repo/Flock readiness, worktree safety, issue queue health, and PR bottlenecks, then recommends the next workflow. From there, route to the smallest command that matches the work:
+
+| Command | Use when | Mutates files or tracker state? |
+| --- | --- | --- |
+| `/flock-status` | You need status, blockers, and the next recommended command. | No |
+| `/product` | A feature idea or user outcome needs product shaping, acceptance criteria, or prioritization. | No by default |
+| `/lead` | Work needs technical decomposition, sequencing, risk assessment, or workflow routing. | No by default |
+| `/scout-and-plan` | An unclear area needs deeper repository reconnaissance and an implementation plan. | No |
+| `/groom` | The ready queue is low and GitHub issues need classification into `ready-for-agent`, `needs-info`, or related states. | Yes, may update issue labels/comments |
+| `/work` | The `ready-for-agent` queue is stocked and you want Flock to work issues one at a time. | Yes, creates branches/commits/PRs |
+| `/issue <number>` | You want one specific GitHub issue implemented. | Yes, creates a branch and may commit/open a PR |
+| `/pr-review <number>` | An open pull request needs review. | No by default |
+| `/implement` or `/implement-and-review` | You have an explicit implementation task rather than a GitHub issue. | Yes, edits files |
+
+Human merge remains the policy: Flock can prepare or review PRs, but a human decides when to merge. If a dogfood checklist exists in this repository, read it after `/flock-status` to confirm the current validation target before starting mutating work.
 
 ## Installation
 

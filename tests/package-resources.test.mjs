@@ -23,6 +23,7 @@ const expectedPromptNames = [
 	"issue",
 	"lead",
 	"manager",
+	"operate",
 	"product",
 	"project-config",
 	"pr-review",
@@ -41,6 +42,7 @@ const expectedPromptSkillRoutes = new Map([
 	["groom", "groom"],
 	["flock-status", "flock-status"],
 	["manager", "engineering-manager"],
+	["operate", "operator-run"],
 	["lead", "tech-lead"],
 	["product", "product-manager"],
 	["project-config", "project-config"],
@@ -55,6 +57,7 @@ const expectedSkillNames = [
 	"ic-dev",
 	"ic-review",
 	"issue-loop",
+	"operator-run",
 	"pr-review",
 	"product-manager",
 	"project-config",
@@ -235,6 +238,30 @@ test("issue workflow explicitly completes tracker items without PR auto-close wo
 	assert.doesNotMatch(issueWorkerSkill, /Use `Closes #<number>`/);
 	assert.match(projectConfigTemplate, /Tracker completion policy/);
 	assert.match(projectConfig, /Tracker completion policy/);
+});
+
+test("operator run workflow is exposed and bounded", async () => {
+	const operatePrompt = await readFile(join(repoRoot, ".pi", "prompts", "operate.md"), "utf8");
+	const operatorRunSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-run", "SKILL.md"), "utf8");
+
+	assert.match(operatePrompt, /Use the `operator-run` skill/);
+	assert.match(operatePrompt, /read `docs\/flock\/project\.md` before any mutating action/);
+	assert.match(operatePrompt, /execute at most one delegated action, then stop/);
+	assert.match(operatePrompt, /never auto-merge/);
+	assert.match(operatePrompt, /Do not claim validation, review, tracker changes, or tracker completion occurred unless command output was observed/);
+
+	assert.match(operatorRunSkill, /Run exactly one bounded Flock operator decision cycle/);
+	assert.match(operatorRunSkill, /Before taking any mutating action, read `docs\/flock\/project\.md` completely/);
+	assert.match(operatorRunSkill, /Operator Approval Policy/);
+	assert.match(operatorRunSkill, /ready issue work requires `Issue selection for queued work`/);
+	assert.match(operatorRunSkill, /`ask` or equivalent confirmation language permits dispatch only after/);
+	assert.match(operatorRunSkill, /`never`, `blocked`, missing, unclear/);
+	assert.match(operatorRunSkill, /triage requires `Triage labels\/comments`/);
+	assert.match(operatorRunSkill, /grooming requires `Grooming labels\/comments`/);
+	assert.match(operatorRunSkill, /Dispatch exactly one underlying workflow and then stop/);
+	assert.match(operatorRunSkill, /Use the `issue-loop` skill/);
+	assert.match(operatorRunSkill, /Never auto-merge/);
+	assert.match(operatorRunSkill, /Do not claim validation, review, tracker changes, or tracker completion unless command output/);
 });
 
 test("project config documents operator approval policy", async () => {

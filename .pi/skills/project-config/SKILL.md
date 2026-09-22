@@ -13,7 +13,7 @@ Flock's generic skills can run with conservative defaults, but reliable queue wo
 docs/flock/project.md
 ```
 
-This file records tracker commands, labels, branch naming, validation gates, PR policy, review policy, merge policy, retry policy, and workflow defaults.
+This file records tracker commands, labels, branch naming, validation gates, PR policy, review policy, merge policy, retry policy, operator approval policy, and workflow defaults.
 
 ## Read first
 
@@ -33,6 +33,7 @@ A complete config has these sections:
 - `## Review`
 - `## Merge`
 - `## Retry`
+- `## Operator Approval Policy`
 - `## Workflow Defaults`
 - `## Project Notes`
 
@@ -85,6 +86,8 @@ Default Flock v1 policy is conservative:
 - confirm before queued issue work
 - no auto-merge
 
+Operator approval policy must distinguish Issue selection, Grooming labels/comments, Branch creation, Commits, PR creation/update, Tracker completion/issue close, and Merge. Merge remains human-only.
+
 But still state those choices explicitly in the config.
 
 ## Writing the config
@@ -120,8 +123,9 @@ When present, Flock skills should prefer `docs/flock/project.md` over built-in d
 - review escalation triggers
 - PR and tracker completion policy
 - merge/retry policy
+- operator approval policy for bounded automation
 
-When absent, Flock skills may use conservative defaults, but should mention that `/project-config` can make the workflow repo-specific.
+When absent, Flock skills may use conservative defaults, but should mention that `/project-config` can make the workflow repo-specific. Mutating operator automation should block when the operator approval policy is absent; dry-run operator planning may still run read-only.
 
 ## Check mode
 

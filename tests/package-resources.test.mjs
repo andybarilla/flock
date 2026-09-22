@@ -234,6 +234,30 @@ test("issue workflow explicitly completes tracker items without PR auto-close wo
 	assert.match(projectConfig, /Tracker completion policy/);
 });
 
+test("project config documents operator approval policy", async () => {
+	const projectConfigSkill = await readFile(join(repoRoot, ".pi", "skills", "project-config", "SKILL.md"), "utf8");
+	const projectConfigTemplate = await readFile(join(repoRoot, ".pi", "skills", "project-config", "TEMPLATE.md"), "utf8");
+	const projectConfig = await readFile(join(repoRoot, "docs", "flock", "project.md"), "utf8");
+	const operatorWorkflow = await readFile(join(repoRoot, "docs", "operator-workflow.md"), "utf8");
+
+	for (const content of [projectConfigSkill, projectConfigTemplate, projectConfig]) {
+		assert.match(content, /Operator Approval Policy/);
+		assert.match(content, /Issue selection/);
+		assert.match(content, /Grooming labels\/comments/);
+		assert.match(content, /Branch creation/);
+		assert.match(content, /Commits/);
+		assert.match(content, /PR creation\/update/);
+		assert.match(content, /Tracker completion\/issue close/);
+		assert.match(content, /Merge/);
+	}
+
+	assert.match(projectConfigSkill, /Mutating operator automation should block when the operator approval policy is absent/);
+	assert.match(projectConfigTemplate, /dry-run only/);
+	assert.match(projectConfig, /human merge remains required/);
+	assert.match(operatorWorkflow, /Example: conservative repository policy/);
+	assert.match(operatorWorkflow, /Example: trusted\/high-automation repository policy/);
+});
+
 test("skills load from .pi/skills with required descriptions", () => {
 	const { skills, diagnostics } = loadSkillsFromDir({
 		dir: join(repoRoot, ".pi", "skills"),

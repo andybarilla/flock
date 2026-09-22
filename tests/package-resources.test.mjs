@@ -366,6 +366,13 @@ test("operator herdr worker dispatch is gated, fail-stop, and independently veri
 	assert.match(operatorRunSkill, /before the validation and review legs/);
 	assert.match(operatorRunSkill, /Any `herdr agent start` failure/);
 
+	// Re-review fixes: resume re-establishes validation, Herdr selection bound,
+	// and the provenance marker is posted exactly once.
+	assert.match(operatorRunSkill, /re-run the configured gate command against the PR head/);
+	assert.match(operatorRunSkill, /validation evidence: the configured gate command passed against the PR head in this run/);
+	assert.match(operatorRunSkill, /exactly one issue per cycle/);
+	assert.match(operatorRunSkill, /post it once/);
+
 	// Run log records agent, pane/workspace IDs, worktree path, and verification.
 	assert.match(operatorRunSkill, /Herdr dispatch: <enabled\|disabled/);
 	assert.match(operatorRunSkill, /agent=<issue-<n>\|none>/);

@@ -69,7 +69,7 @@ Recommended action priority:
 6. groom one bounded batch when grooming labels/comments are allowed and the grooming limit permits it
 7. stop when the queue is empty or no safe action exists
 
-Resume criteria — an open PR is a resume target only when all of these are observed: its head branch matches the configured issue branch pattern, its author is the authenticated account (`gh api user --jq .login`), its linked issue is open, it carries the `flock-operator-run` provenance marker comment authored by the authenticated account (observed via `gh pr view <number> --json comments`, filtered to the authenticated login — a marker comment from any other author is meaningless and does not qualify the PR), and project config allows conditional merge. Branch shape and authorship alone never qualify a PR: the authenticated account is usually the maintainer's own, so without the self-authored provenance marker the PR stays human-merged. On resume, first dispatch the `pr-review` workflow for the PR — a fresh non-blocking verdict re-establishes review evidence, and a blocking verdict stops the run. Then run the section 6 merge step; do not redispatch the issue. A PR failing any criterion is not a resume target: never merge it, and ask a human when ownership is ambiguous.
+Resume criteria — an open PR is a resume target only when all of these are observed: its head branch matches the configured issue branch pattern, its author is the authenticated account (`gh api user --jq .login`), its linked issue is open, it carries the `flock-operator-run` provenance marker comment authored by the authenticated account (observed via `gh pr view <number> --json comments`, filtered to the authenticated login — a marker comment from any other author is meaningless and does not qualify the PR), and project config allows conditional merge. Branch shape and authorship alone never qualify a PR: the authenticated account is usually the maintainer's own, so without the self-authored provenance marker the PR stays human-merged. On resume, first re-establish validation and review evidence in the resuming run: re-run the configured gate command against the PR head (in the Herdr worktree if it still exists, otherwise in a fresh checkout of the PR branch) and stop on failure — the marker certifies only the verification legs observed when it was posted, which may predate validation — then dispatch the `pr-review` workflow for the PR; a fresh non-blocking verdict re-establishes review evidence, and a blocking verdict stops the run. Then run the section 6 merge step; do not redispatch the issue. A PR failing any criterion is not a resume target: never merge it, and ask a human when ownership is ambiguous.
 
 This priority is a routing default only. Stop and ask if the safest action is ambiguous or issue scope is unclear.
 
@@ -155,7 +155,7 @@ If either is false, dispatch issue work through the normal in-session `issue-loo
 
 ### Dispatch sequence
 
-For each selected issue:
+Issue selection is unchanged from the in-session flow: the operator selects the single highest-priority ready issue from the section 2 decision pass and works exactly one issue per cycle. For each selected issue:
 
 1. Create the worktree and its pane without stealing focus, using the config worktree pattern and binding to the operator's repository:
 
@@ -216,14 +216,15 @@ Preconditions — all must hold before any merge command:
 2. project config contains a conditional `Merge` approval policy that allows merge
 3. project config records a verified check-wait command; without it, report the PR state and stop for a human merge
 4. review evidence is non-blocking: the delegated workflow reported non-blocking review this run, the supervisor observed a non-blocking `pr-review` verdict under section 5a Herdr dispatch this run, or — on resume — a fresh `pr-review` dispatch for the PR returned a non-blocking verdict in this run; a blocking verdict stops the run
+5. validation evidence: the configured gate command passed against the PR head in this run — observed from the delegated workflow's output, from the supervisor's section 5a worktree gate re-run, or from the section 2 resume gate re-run; missing or failed validation stops the run before any merge command
 
-When the delegated workflow reports an opened PR, immediately record provenance so a later stopped run can recognize it (under Herdr dispatch, the section 5a PR verification leg records it before the validation and review legs):
+When the delegated workflow reports an opened PR, immediately record provenance so a later stopped run can recognize it (under Herdr dispatch, the section 5a PR verification leg records it before the validation and review legs); post it once — if the marker is already present from the section 5a PR verification leg, do not post a duplicate:
 
 ```bash
 gh pr comment <number> --body 'flock-operator-run: opened by the Flock operator; eligible for conditional operator merge.'
 ```
 
-The marker binds provenance through authorship: only the operator's authenticated account writes it, and resume checks both the marker and its author (section 2). A PR without a self-authored marker is never merged by the operator.
+The marker binds provenance through authorship: only the operator's authenticated account writes it, and resume checks both the marker and its author (section 2). A PR without a self-authored marker is never merged by the operator. The marker certifies provenance and the verification legs observed when it was posted; because it may be posted before the validation and review legs complete, resume always re-establishes validation and review evidence (section 2) before the merge step.
 
 ### Check-wait command
 

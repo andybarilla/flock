@@ -66,8 +66,8 @@ Start every new repository session with the read-only status command:
 | `/lead` | Work needs technical decomposition, sequencing, risk assessment, or workflow routing. | No by default |
 | `/scout-and-plan` | An unclear area needs deeper repository reconnaissance and an implementation plan. | No |
 | `/groom` | The ready queue is low and GitHub issues need classification into `ready-for-agent`, `needs-info`, or related states. | Yes, may update issue labels/comments |
-| `/work` | The `ready-for-agent` queue is stocked and you want Flock to work issues one at a time. | Yes, creates branches/commits/PRs |
-| `/issue <number>` | You want one specific GitHub issue implemented. | Yes, creates a branch and may commit/open a PR |
+| `/work` | The `ready-for-agent` queue is stocked and you want Flock to work issues one at a time, with post-implementation review when a PR/diff exists. | Yes, creates branches/commits/PRs |
+| `/issue <number>` | You want one specific GitHub issue implemented and then reviewed when a PR/diff exists. | Yes, creates a branch and may commit/open a PR |
 | `/pr-review <number>` | An open pull request needs review. | No by default |
 | `/implement` or `/implement-and-review` | You have an explicit implementation task rather than a GitHub issue. | Yes, edits files |
 

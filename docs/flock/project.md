@@ -1,6 +1,6 @@
 # Flock Project Config
 
-Draft status: incomplete. This file records what is known for `andybarilla/flock` and names the choices still needed before unattended queue workflows should rely on it.
+Status: complete. This file records the repository-specific Flock policy for `andybarilla/flock`.
 
 ## Tracker
 
@@ -94,7 +94,7 @@ For documentation-only changes, `git diff --check` is usually sufficient, but `n
 Notes:
 - `npm run typecheck` validates TypeScript extension files under `.pi/extensions/**/*.ts`.
 - `git diff --check` catches whitespace and conflict-marker issues.
-- This repository does not yet have behavior/unit tests for skills or prompt templates.
+- Lightweight behavior tests for prompt, skill, and package-resource loading are part of the default gate via `npm test`.
 
 ## PR
 
@@ -166,4 +166,4 @@ Auto-merge: no
 
 ## Open Questions
 
-- Should Flock add behavior tests for prompt/skill loading beyond TypeScript extension typechecking?
+None.

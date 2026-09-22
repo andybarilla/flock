@@ -74,10 +74,10 @@ Required limits:
 - maximum issues worked
 - maximum grooming changes or grooming batches
 - maximum triage issues changed
+- maximum runtime
 
 Recommended limits:
 
-- maximum runtime
 - maximum consecutive no-op cycles
 - maximum failures or retries, defaulting to zero retries
 

@@ -1,0 +1,211 @@
+---
+name: github-issue-worker
+description: Works one GitHub issue from the current repository. Use when the user asks to work issue #123, /issue, or a GitHub issue URL.
+---
+
+# GitHub Issue Worker
+
+Work exactly one GitHub issue in the current repository.
+
+You may implement directly in the current pi session, or delegate implementation to the `ic-dev` subagent when the `subagent` tool is available. Keep the workflow conservative: one issue, one branch, one implementation path, one handoff.
+
+## Project config
+
+Before applying branch, validation, PR, review, merge, or retry defaults, check for `docs/flock/project.md`. If present, read it and follow its repository-specific policy. If absent, use the conservative defaults in this skill and mention that `/project-config` can create repo-specific policy.
+
+## Inputs
+
+Accept any of:
+
+- issue number: `123`
+- issue reference: `#123`
+- GitHub issue URL
+- issue plus extra instructions
+
+If no issue is identifiable, ask for it.
+
+## 1. Preflight
+
+Confirm this is a Git repository with a GitHub remote:
+
+```bash
+git rev-parse --show-toplevel
+gh repo view --json nameWithOwner,url
+```
+
+Check current state:
+
+```bash
+git status --short
+git branch --show-current
+```
+
+If the worktree has unrelated changes, stop and ask before continuing. Do not overwrite or mix user work into the issue branch.
+
+## 2. Read the issue
+
+Read the issue and comments:
+
+```bash
+gh issue view <number> --comments
+```
+
+Also capture structured metadata when useful:
+
+```bash
+gh issue view <number> --json number,title,body,state,labels,assignees,author,url
+```
+
+Treat the body and comments as one chronological record. Later comments may answer or amend earlier text.
+
+## 3. Dispatchability check
+
+Before editing, decide whether the issue is actually one implementable unit.
+
+Stop and report instead of implementing when:
+
+- the current issue record contains unresolved implementation-changing ambiguity
+- the issue asks for several independently shippable outcomes
+- the issue is an epic/tracking item rather than implementation work
+- the requested work appears already completed
+- credentials, production access, or a human decision are required
+
+If it is not dispatchable, return:
+
+```md
+BLOCKED: <reason>
+Issue: <url>
+Needed: <question, decomposition, or human action>
+```
+
+## 4. Restate done
+
+Before branching or editing, write a short implementation brief:
+
+```md
+Issue: #<number> <title>
+URL: <url>
+Done means:
+- <observable acceptance criterion>
+- <observable acceptance criterion>
+Validation:
+- <commands/checks expected>
+Out of scope:
+- <anything explicitly not included, or "nothing stated">
+Open questions:
+- <or "none">
+```
+
+If `Open questions` is not `none`, stop and ask.
+
+## 5. Create an issue branch
+
+Start from the repository's current default branch unless the user said otherwise.
+
+Suggested branch name:
+
+```text
+flock/issue-<number>-<short-slug>
+```
+
+Commands, adjusted for the repo:
+
+```bash
+git fetch origin
+git checkout main || git checkout master
+git pull --ff-only
+git checkout -b flock/issue-<number>-<short-slug>
+```
+
+If the repo uses a different default branch, use it.
+
+## 6. Implement
+
+Use the `ic-dev` workflow.
+
+When the `subagent` tool is available and the task is non-trivial, prefer delegating implementation to the project `ic-dev` agent with a complete brief. Otherwise implement directly after loading the `ic-dev` skill.
+
+Implementation brief for delegation:
+
+```md
+Work GitHub issue #<number> to completion in this worktree.
+
+<issue title, body, and relevant comments verbatim or faithfully summarized with links>
+
+<the Done means / Validation / Out of scope brief>
+
+Follow the Flock ic-dev workflow. Verify with real command output. Do not guess on implementation-changing ambiguity.
+```
+
+Whether delegated or direct:
+
+- inspect before editing
+- prefer failing test first where practical
+- keep changes scoped to the issue
+- update comments/docs that describe changed behavior
+- do not commit secrets or generated junk
+
+## 7. Verify
+
+Run the relevant checks. Use repo conventions when available.
+
+Common discovery commands:
+
+```bash
+find . -maxdepth 3 -iname 'package.json' -o -iname 'pyproject.toml' -o -iname 'Cargo.toml' -o -iname 'go.mod'
+git diff --stat
+git diff --check
+```
+
+Do not claim a check passed unless you read its output.
+
+## 8. Commit and PR
+
+Unless the user asked not to commit, create a coherent commit:
+
+```bash
+git status --short
+git add <files>
+git commit -m "<concise issue-focused message>"
+```
+
+Before opening a PR, inspect commits for accidental closing keywords when the issue should remain open:
+
+```bash
+git log --oneline --decorate origin/main..HEAD || git log --oneline --decorate origin/master..HEAD
+```
+
+Open or prepare a PR according to user preference. If opening:
+
+```bash
+git push -u origin HEAD
+gh pr create --fill
+```
+
+Use `Refs #<number>` unless the issue should definitely close when merged. Use `Closes #<number>` only when the entire issue is completed by this PR.
+
+## 9. Handoff
+
+Return exactly:
+
+```md
+Issue: #<number> <title>
+Branch: <branch>
+PR: <url or "not opened">
+Changed: <one or two sentences>
+Verified: <commands run and observed result>
+Left out: <or "nothing">
+Unsure about: <or "nothing">
+```
+
+If blocked, use the blocked format from step 3.
+
+## Red flags
+
+| Thought | Reality |
+|---|---|
+| "The ready label means it is implementable." | Read the issue and comments; labels can be stale. |
+| "I can combine this with nearby cleanup." | One issue means one scoped change. |
+| "A comment asked a question, so it is blocked." | Later comments may answer it; read chronologically. |
+| "The PR body says Refs, so closing keywords are safe in commits." | GitHub can close from the squash commit body. Check commit messages. |
+| "The subagent did the work, so I don't need to inspect anything." | You still own the handoff and verification claims. |

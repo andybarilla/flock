@@ -1,0 +1,32 @@
+{
+  "name": "@andybarilla/flock",
+  "version": "0.1.0",
+  "description": "Pi-native skills, prompt templates, agents, and extensions for managing software development sessions.",
+  "private": true,
+  "keywords": [
+    "pi-package",
+    "pi",
+    "skills",
+    "prompt-templates",
+    "coding-agent"
+  ],
+  "license": "MIT",
+  "pi": {
+    "extensions": [
+      ".pi/extensions"
+    ],
+    "skills": [
+      ".pi/skills"
+    ],
+    "prompts": [
+      ".pi/prompts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-agent-core": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  }
+}

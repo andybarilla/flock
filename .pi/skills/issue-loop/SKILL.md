@@ -7,7 +7,7 @@ description: Works GitHub issues that are ready for an agent, one at a time. Use
 
 Work ready GitHub issues one at a time.
 
-This is the conservative, attended version of the queue loop. It coordinates work but does not merge automatically. It should keep context flat by handing individual issues to the `github-issue-worker` workflow, and by using the `ic-dev` subagent when useful.
+This is the conservative, attended version of the queue loop. It coordinates work but does not merge automatically. After the user accepts a selected issue (or when `--yes` is supplied), it immediately dispatches that issue to the `github-issue-worker` workflow in the same run. It should keep context flat by handing individual issues to the `github-issue-worker` workflow, and by using the `ic-dev` subagent when useful.
 
 ## Project config
 
@@ -65,19 +65,21 @@ Before starting it, read the issue and comments enough to show the user what wil
 gh issue view <number> --comments
 ```
 
-Summarize:
+Summarize the selected issue and the mutating work that will start if accepted:
 
 ```md
 Next issue: #<number> <title>
 Why selected: <label / explicit selection>
 Likely scope: <one sentence>
+Branch strategy: start from <default branch> and create/use `flock/issue-<number>-<short-slug>` unless the project config or user instructions say otherwise.
+Next action if accepted: immediately dispatch to the `github-issue-worker` workflow in this same run.
 ```
 
-If not running with `--yes`, ask for confirmation before continuing.
+If not running with `--yes`, ask for confirmation before continuing. If the user declines, stop without creating a branch, commit, issue update, PR, or other mutating change.
 
 ## 4. Dispatch one issue
 
-Work the issue using the `github-issue-worker` skill.
+After confirmation, or immediately when `--yes` is present, work the issue using the `github-issue-worker` skill. Do not ask the user to run a second command before dispatching.
 
 In this v1 loop, do not independently implement inside the loop instructions. The issue worker owns:
 

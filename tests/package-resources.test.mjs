@@ -250,7 +250,7 @@ test("operator run workflow is exposed and bounded", async () => {
 	assert.match(operatePrompt, /recommend exactly one next action/);
 	assert.match(operatePrompt, /execute one delegated action per cycle/);
 	assert.match(operatePrompt, /loop mode repeats safe cycles only until explicit limits or a stop condition/);
-	assert.match(operatePrompt, /never auto-merge/);
+	assert.match(operatePrompt, /merge only under an explicit conditional Merge approval policy/);
 	assert.match(operatePrompt, /Do not claim validation, review, tracker changes, or tracker completion occurred unless command output was observed/);
 
 	assert.match(operatorRunSkill, /Run a bounded Flock operator decision cycle or bounded multi-step loop/);
@@ -263,7 +263,8 @@ test("operator run workflow is exposed and bounded", async () => {
 	assert.match(operatorRunSkill, /grooming requires `Grooming labels\/comments`/);
 	assert.match(operatorRunSkill, /Dispatch exactly one underlying workflow per cycle/);
 	assert.match(operatorRunSkill, /Use the `issue-loop` skill/);
-	assert.match(operatorRunSkill, /Never auto-merge/);
+	assert.match(operatorRunSkill, /merge requires the `Merge` policy category/);
+	assert.match(operatorRunSkill, /never merge any other PR/);
 	assert.match(operatorRunSkill, /Do not claim validation, review, tracker changes, or tracker completion unless command output/);
 });
 
@@ -331,7 +332,8 @@ test("project config documents operator approval policy", async () => {
 
 	assert.match(projectConfigSkill, /Mutating operator automation should block when the operator approval policy is absent/);
 	assert.match(projectConfigTemplate, /dry-run only/);
-	assert.match(projectConfig, /human merge remains required/);
+	assert.match(projectConfig, /conditional operator merge/);
+	assert.match(projectConfig, /All other PRs remain human-merged/);
 	assert.match(operatorWorkflow, /Example: conservative repository policy/);
 	assert.match(operatorWorkflow, /Example: trusted\/high-automation repository policy/);
 });

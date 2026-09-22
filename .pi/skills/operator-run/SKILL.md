@@ -7,7 +7,7 @@ description: Runs a bounded Flock operator cycle or multi-step loop, either read
 
 Run a bounded Flock operator decision cycle or bounded multi-step loop.
 
-The operator is an orchestrator. It inspects repository state, chooses safe next actions, delegates each action to the existing Flock workflow, records the observed result, and stops when limits or safety conditions require human judgment. It must not merge, bypass validation, bypass review, or relax the safety defaults of `/work`, `/groom`, `/triage`, `/issue`, or review workflows.
+The operator is an orchestrator. It inspects repository state, chooses safe next actions, delegates each action to the existing Flock workflow, records the observed result, and stops when limits or safety conditions require human judgment. It must not bypass validation, bypass review, or relax the safety defaults of `/work`, `/groom`, `/triage`, `/issue`, or review workflows. It must not merge except under an explicit conditional Merge approval policy in project config (see the merge rules below).
 
 ## Inputs
 
@@ -108,6 +108,7 @@ Policy category checks:
 - triage requires `Triage labels/comments` and must dispatch through the `triage` workflow with a limit of one issue unless project policy/user limits are lower
 - grooming requires `Grooming labels/comments` and must dispatch through the `groom` workflow for one bounded batch unless project policy/user limits are lower
 - PR review must dispatch through the `pr-review` workflow for one PR, or `ic-review` only when reviewing a local diff; review must not merge
+- merge requires the `Merge` policy category and is allowed only as a squash merge of a green PR opened by the operator in the current run. Green means, all observed from `gh` output: every `statusCheckRollup` entry successful (none pending or failing), `mergeable: MERGEABLE`, Flock review verdict non-blocking, and `reviewDecision: APPROVED` when required by branch protection (not required otherwise). The operator polls up to the configured max PR wait and stops with reason "PR not green" on timeout; it never waits indefinitely. Failing checks, merge conflicts, blocking review, missing/insufficient Merge policy, or any PR not opened by this run each stop the run before any merge command. The issue is closed completed only after the merge is verified on the default branch.
 
 Interpret the selected approval policy category explicitly:
 
@@ -138,7 +139,7 @@ Use the `groom` skill to groom the GitHub issue backlog for this repository.
 Arguments: --limit <configured batch size> --yes
 ```
 
-The delegated workflow owns its normal safety checks, validation, review, PR handling, and tracker completion rules. If it reports blocked or failed status, the operator must stop and report that result. Never auto-merge.
+The delegated workflow owns its normal safety checks, validation, review, PR handling, and tracker completion rules. If it reports blocked or failed status, the operator must stop and report that result. Merge only under the conditional Merge policy rules above; never merge any other PR.
 
 ## 6. Loop continuation gate
 
@@ -202,6 +203,6 @@ Next recommended human action: <merge/review/fix/configure/run suggested command
 | "Loop means issue work can skip review until the end." | Each delegated issue workflow must preserve validation and review requirements before the loop can continue. |
 | "The project has ready issues, so mutation is approved." | Mutation also requires config and approval policy for the selected action. |
 | "I can implement the selected issue here." | Dispatch to `issue-loop`; underlying workflows own implementation. |
-| "The operator can merge after checks." | Never auto-merge. |
+| "The operator can merge once checks look fine." | Merge only under an explicit conditional Merge policy: squash, green per the observed definition, run-opened PRs only, verified before issue close. Everything else stops for a human. |
 | "A failed issue can be skipped so the loop keeps going." | Stop on failed or blocked issue in v1 unless explicit retry policy says otherwise. |
 | "Dry-run changed labels/comments because it was harmless." | Dry-run is strictly read-only. |

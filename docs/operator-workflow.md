@@ -14,7 +14,7 @@ The operator is not a fully autonomous software development agent. It is an orch
 
 ## Non-goals
 
-- Auto-merging pull requests.
+- Merging red, conflicting, unreviewed, or non-run pull requests. Conditional merge of green, run-opened PRs is allowed only under an explicit Merge approval policy (see below).
 - Replacing product, architecture, or implementation judgment for ambiguous work.
 - Working unconfigured repositories in mutating modes.
 - Continuing after failed validation, blocking review, missing review target, unexpected branch state, or dirty worktree.
@@ -98,7 +98,7 @@ Allowed command families:
 
 The operator must not:
 
-- call merge commands
+- call merge commands except under an explicit conditional Merge approval policy (see Merge step below)
 - bypass validation or review requirements
 - close tracker items unless the underlying issue workflow reports successful implementation, observed validation, applicable PR preparation, and non-blocking review
 - continue after an underlying workflow reports blocked or failed work
@@ -118,8 +118,8 @@ The policy should distinguish at least these categories:
 | Branch creation | ask/blocked | Usually allowed when issue work is allowed. |
 | Commits | ask/blocked | Usually allowed for issue work within the branch policy. |
 | PR creation/update | ask/blocked | Allowed only when PR policy permits. |
-| Tracker completion/issue close | ask/blocked | Allowed only through the issue worker's completion rules. |
-| Merge | never | Human-only for v1. |
+| Tracker completion/issue close | ask/blocked | Allowed only through the issue worker's completion rules; closure happens after verified merge. |
+| Merge | never | May become conditional auto-approve for green, run-opened PRs in trusted repos; human-only otherwise. |
 
 A trusted/high-automation repository can allow routine issue selection and bounded grooming. An unconfigured repository cannot run one-shot or loop automation.
 
@@ -162,16 +162,34 @@ Approval categories:
 - Branch creation: auto-approve for configured issue branches from the configured base branch.
 - Commits: auto-approve scoped commits on the issue branch after validation has been run.
 - PR creation/update: auto-approve PR creation or updates using neutral `Refs #<number>` references.
-- Tracker completion/issue close: auto-approve only through the issue worker completion policy after implementation, observed validation, PR preparation when applicable, and non-blocking review.
-- Merge: never; human merge remains required.
+- Tracker completion/issue close: auto-approve only through the issue worker completion policy after verified merge of the issue's PR on the default branch.
+- Merge: auto-approve squash merge of PRs opened by the operator in the current run when green; all other PRs remain human-merged.
 
 Limits:
 - Max cycles per operator run: 5
 - Max issues worked per operator run: 3
 - Max grooming batches per operator run: 1
 - Max triage issues per operator run: 5
+- Max PR wait per issue: 15m
 - Max runtime: ask when launching the operator
 ```
+
+## Merge step
+
+When the project config allows conditional merge, the operator merges after a delegated issue cycle completes with an open PR:
+
+1. Poll the PR until it is green or `Max PR wait` elapses.
+2. Green means, all observed from `gh` output: every `statusCheckRollup` entry successful (none pending or failing), `mergeable: MERGEABLE` (no conflicts), Flock review verdict non-blocking, and `reviewDecision: APPROVED` when required by branch protection (not required otherwise).
+3. When green, squash-merge, verify the merge succeeded, and sync the default branch.
+4. Close the issue with completion evidence only after the merge is verified; unmerged PRs leave the issue open.
+
+Scope and limits:
+
+- Only PRs opened by the operator in the current run are eligible; all other PRs remain human-merged.
+- Merge method is squash. The operator never deletes branches; repository auto-delete settings handle branch cleanup.
+- On `Max PR wait` timeout, the operator stops cleanly with stop reason "PR not green" and a resumable handoff; it never waits indefinitely.
+- Failing checks, merge conflicts, blocking review, or missing/insufficient Merge policy each stop the run before any merge command, with a distinct reason.
+- Merge without an explicit conditional Merge policy section in project config is refused.
 
 ## Stop conditions
 
@@ -192,6 +210,8 @@ The operator must stop and report the reason when any of these occur:
 - required review cannot run
 - review verdict is blocking
 - tracker completion fails when required
+- the PR is not green when `Max PR wait` elapses
+- merge execution or merge verification fails
 - configured cycle, issue, grooming, triage, runtime, or retry limits are reached
 - an underlying Flock workflow reports blocked/failed status
 

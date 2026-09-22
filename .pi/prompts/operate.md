@@ -22,7 +22,7 @@ Default behavior:
 - prefer dispatching one ready issue through the existing `issue-loop` workflow when issue selection is allowed and ready work exists
 - otherwise consider one bounded triage action, one bounded grooming action, or one PR review only when policy and limits allow
 - preserve validation, review, branch safety, PR, and tracker completion behavior from the delegated workflow
-- never auto-merge
+- merge only under an explicit conditional Merge approval policy in project config: squash merge of green PRs opened by the operator in the current run, verified before issue close; all other PRs remain human-merged
 - stop and report clearly on dirty worktree, ambiguity, failed validation, blocking review, review cannot run, auth failure, unexpected branch state, blocked issue work, missing policy, queue empty, configured limits, or any safety concern
 - finish with a stage-by-stage summary and, in loop mode, a final run log with every cycle, action, issue/PR references, validation result, review verdict, tracker changes, stop reason, and next recommended human action
 - Do not claim validation, review, tracker changes, or tracker completion occurred unless command output was observed from the delegated workflow

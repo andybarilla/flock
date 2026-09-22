@@ -148,6 +148,34 @@ Notes:
 - Flock v1 issue-loop stops on blocked/failed work.
 - Retry policy can be revisited after claim/label behavior and gates are stable.
 
+## Operator Approval Policy
+
+Mutating operator automation is allowed only when this config is present and the selected action is explicitly allowed below. If this section is missing in another repository, operator workflows must use dry-run only and ask before mutation.
+
+Approval categories:
+- Issue selection for queued work: auto-approve for issues labeled `ready-for-agent` after the issue-loop dispatchability summary succeeds.
+- Grooming labels/comments: auto-approve within the grooming batch limit when the groomer has no blocking product or technical questions.
+- Branch creation: auto-approve for issue branches matching `flock/issue-<number>-<short-slug>` from `main`.
+- Commits: auto-approve scoped commits on the issue branch after validation has been run.
+- PR creation/update: auto-approve PR creation or updates using neutral `Refs #<number>` references.
+- Tracker completion/issue close: auto-approve only through the issue worker completion policy after implementation, observed validation, PR preparation when applicable, and non-blocking review.
+- Merge: never; human merge remains required.
+
+Limits:
+- Max cycles per operator run: 5
+- Max issues worked per operator run: 3
+- Max grooming batches per operator run: 1
+- Max runtime: ask when launching the operator
+
+Stop conditions:
+- missing or insufficient project config
+- dirty or unexpected worktree state
+- auth, branch, validation, PR, review, or tracker failure
+- blocking product or technical question
+- ambiguous, too broad, already complete, or non-dispatchable issue
+- failed validation or blocking review
+- configured limits reached
+
 ## Workflow Defaults
 
 Ready queue label: `ready-for-agent`

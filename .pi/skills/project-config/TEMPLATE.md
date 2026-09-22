@@ -102,6 +102,34 @@ Policy: no retry
 Notes:
 - Flock v1 issue-loop stops on blocked/failed work.
 
+## Operator Approval Policy
+
+Mutating operator automation requires explicit approval policy here. When this section is absent, operator workflows must use dry-run only and ask before any mutation.
+
+Approval categories:
+- Issue selection for queued work: ask
+- Grooming labels/comments: ask
+- Branch creation: ask
+- Commits: ask
+- PR creation/update: ask
+- Tracker completion/issue close: ask
+- Merge: never
+
+Limits:
+- Max cycles per operator run: 1
+- Max issues worked per operator run: 1
+- Max grooming batches per operator run: 0
+- Max runtime: ask
+
+Stop conditions:
+- missing or insufficient project config
+- dirty or unexpected worktree state
+- auth, branch, validation, PR, review, or tracker failure
+- blocking product or technical question
+- ambiguous, too broad, already complete, or non-dispatchable issue
+- failed validation or blocking review
+- configured limits reached
+
 ## Workflow Defaults
 
 Ready queue label: ready-for-agent

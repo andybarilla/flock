@@ -125,6 +125,52 @@ The policy should distinguish at least these categories:
 
 A trusted/high-automation repository can allow routine issue selection and bounded grooming. An unconfigured repository cannot run one-shot or loop automation.
 
+### Example: conservative repository policy
+
+```md
+## Operator Approval Policy
+
+Mutating operator automation requires explicit approval policy here. When this section is absent, operator workflows must use dry-run only and ask before any mutation.
+
+Approval categories:
+- Issue selection for queued work: ask
+- Grooming labels/comments: ask
+- Branch creation: ask
+- Commits: ask
+- PR creation/update: ask
+- Tracker completion/issue close: ask
+- Merge: never
+
+Limits:
+- Max cycles per operator run: 1
+- Max issues worked per operator run: 1
+- Max grooming batches per operator run: 0
+- Max runtime: ask
+```
+
+### Example: trusted/high-automation repository policy
+
+```md
+## Operator Approval Policy
+
+Mutating operator automation is allowed only when this config is present and the selected action is explicitly allowed below.
+
+Approval categories:
+- Issue selection for queued work: auto-approve for issues labeled `ready-for-agent` after the issue-loop dispatchability summary succeeds.
+- Grooming labels/comments: auto-approve within the grooming batch limit when the groomer has no blocking product or technical questions.
+- Branch creation: auto-approve for configured issue branches from the configured base branch.
+- Commits: auto-approve scoped commits on the issue branch after validation has been run.
+- PR creation/update: auto-approve PR creation or updates using neutral `Refs #<number>` references.
+- Tracker completion/issue close: auto-approve only through the issue worker completion policy after implementation, observed validation, PR preparation when applicable, and non-blocking review.
+- Merge: never; human merge remains required.
+
+Limits:
+- Max cycles per operator run: 5
+- Max issues worked per operator run: 3
+- Max grooming batches per operator run: 1
+- Max runtime: ask when launching the operator
+```
+
 ## Stop conditions
 
 The operator must stop and report the reason when any of these occur:

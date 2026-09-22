@@ -94,7 +94,7 @@ Policy: human merges
 
 Notes:
 - Default: human merges. Flock workflows merge nothing without explicit policy here.
-- Trusted repositories may switch to conditional operator merge: squash merge of PRs opened by the operator in the current run, only when green (all `statusCheckRollup` entries successful, `mergeable: MERGEABLE`, Flock review verdict non-blocking, `reviewDecision: APPROVED` only when branch protection requires it). Record the exact green definition, max PR wait, and merge method here when enabling it.
+- Trusted repositories may switch to conditional operator merge: squash merge of PRs opened by the operator in the current run, or PRs meeting the documented resume criteria (self-authored `flock-operator-run` provenance marker, open linked issue, fresh non-blocking review in the resuming run), only when green (all `statusCheckRollup` entries successful, `mergeable: MERGEABLE`, Flock review verdict non-blocking, `reviewDecision: APPROVED` only when branch protection requires it). Record the exact green definition, max PR wait, and merge method here when enabling it.
 - Issue closure moves to post-merge when conditional merge is enabled.
 
 ## Retry
@@ -125,7 +125,7 @@ Limits:
 - Max triage issues per operator run: 0
 - Max runtime: ask
 
-Trusted repositories may set `Merge` to conditional auto-approve (green, run-opened PRs only, squash) and add a `Max PR wait` limit.
+Trusted repositories may set `Merge` to conditional auto-approve (green, run-opened or provenance-marked resume PRs only, squash) and add a `Max PR wait` limit.
 
 Stop conditions:
 - missing or insufficient project config

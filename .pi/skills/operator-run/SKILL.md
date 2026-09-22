@@ -69,7 +69,7 @@ Recommended action priority:
 6. groom one bounded batch when grooming labels/comments are allowed and the grooming limit permits it
 7. stop when the queue is empty or no safe action exists
 
-Resume criteria — an open PR is a resume target only when all of these are observed: its head branch matches the configured issue branch pattern, its author is the authenticated account (`gh api user --jq .login`), its linked issue is open, it carries the `flock-operator-run` provenance marker comment (observed via `gh pr view <number> --comments`), and project config allows conditional merge. Branch shape and authorship alone never qualify a PR: the authenticated account is usually the maintainer's own, so without the provenance marker the PR stays human-merged. On resume, first dispatch the `pr-review` workflow for the PR — a fresh non-blocking verdict re-establishes review evidence, and a blocking verdict stops the run. Then run the section 6 merge step; do not redispatch the issue. A PR failing any criterion is not a resume target: never merge it, and ask a human when ownership is ambiguous.
+Resume criteria — an open PR is a resume target only when all of these are observed: its head branch matches the configured issue branch pattern, its author is the authenticated account (`gh api user --jq .login`), its linked issue is open, it carries the `flock-operator-run` provenance marker comment authored by the authenticated account (observed via `gh pr view <number> --json comments`, filtered to the authenticated login — a marker comment from any other author is meaningless and does not qualify the PR), and project config allows conditional merge. Branch shape and authorship alone never qualify a PR: the authenticated account is usually the maintainer's own, so without the self-authored provenance marker the PR stays human-merged. On resume, first dispatch the `pr-review` workflow for the PR — a fresh non-blocking verdict re-establishes review evidence, and a blocking verdict stops the run. Then run the section 6 merge step; do not redispatch the issue. A PR failing any criterion is not a resume target: never merge it, and ask a human when ownership is ambiguous.
 
 This priority is a routing default only. Stop and ask if the safest action is ambiguous or issue scope is unclear.
 
@@ -161,7 +161,7 @@ When the delegated workflow reports an opened PR, immediately record provenance 
 gh pr comment <number> --body 'flock-operator-run: opened by the Flock operator; eligible for conditional operator merge.'
 ```
 
-Resume targets must carry this marker (section 2); a PR without it is never merged by the operator.
+The marker binds provenance through authorship: only the operator's authenticated account writes it, and resume checks both the marker and its author (section 2). A PR without a self-authored marker is never merged by the operator.
 
 ### Check-wait command
 

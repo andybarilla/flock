@@ -83,7 +83,7 @@ Recommended limits:
 
 The loop may continue only when the prior cycle returned the repository to an expected safe state and the next action is still allowed by policy. After an issue cycle, the expected safe state is: clean worktree on the default branch, synced with origin, and no operator-created PR from this run still open (the prior cycle's PR was merged and verified, or the cycle created no PR). Any merge stop reason (`PR not green`, `checks failing`, `merge conflict`, `unexpected PR state`, `merge failed`, `merge verification failed`) ends the run rather than continuing.
 
-A run stopped on "PR not green" is resumable: the next operator run detects the still-open operator-created PR (head branch matches the configured issue branch pattern, the `flock-operator-run` provenance marker comment is observed, linked issue still open) and resumes at the merge step — after re-establishing review evidence with a fresh `pr-review` dispatch — instead of reworking the issue. A PR failing any resume criterion is never merged by the operator.
+A run stopped on "PR not green" is resumable: the next operator run detects the still-open operator-created PR (head branch matches the configured issue branch pattern, PR author is the authenticated account, the self-authored `flock-operator-run` provenance marker comment is observed, linked issue still open) and resumes at the merge step — after re-establishing review evidence with a fresh `pr-review` dispatch — instead of reworking the issue. A PR failing any resume criterion is never merged by the operator.
 
 ## Command policy
 
@@ -187,7 +187,7 @@ When the project config allows conditional merge, the operator merges after a de
 
 Scope and limits:
 
-- Only PRs opened by the operator in the current run, or meeting the resume criteria (`flock-operator-run` provenance marker observed, linked issue open, fresh non-blocking `pr-review` verdict in the resuming run), are eligible; all other PRs remain human-merged.
+- Only PRs opened by the operator in the current run, or meeting the resume criteria (PR author is the authenticated account, self-authored `flock-operator-run` provenance marker observed, linked issue open, fresh non-blocking `pr-review` verdict in the resuming run), are eligible; all other PRs remain human-merged.
 - Merge method is squash. The operator never deletes branches; repository auto-delete settings handle branch cleanup.
 - On `Max PR wait` timeout, the operator stops cleanly with stop reason "PR not green" and a resumable handoff; it never waits indefinitely.
 - Failing checks, merge conflicts, blocking review, or missing/insufficient Merge policy each stop the run before any merge command, with a distinct reason.

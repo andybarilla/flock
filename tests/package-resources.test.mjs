@@ -186,6 +186,8 @@ test("issue workflow instructions require automatic separate review when a targe
 	assert.match(issueWorkerSkill, /if there is a reviewable local diff against the base branch, review that diff with the `ic-review` workflow/);
 	assert.match(issueWorkerSkill, /If there is no PR and no reviewable diff, stop and explain clearly/);
 	assert.match(issueWorkerSkill, /Do not auto-merge\. Human merge remains manual/);
+	assert.match(issueWorkerSkill, /Closure deferral to post-merge/);
+	assert.match(issueWorkerSkill, /deferred — closure after merge per project config/);
 	assert.match(issueWorkerSkill, /Review: <review target and verdict, or clear reason review did not run>/);
 	assert.match(issueLoopSkill, /Review:/);
 });
@@ -265,6 +267,10 @@ test("operator run workflow is exposed and bounded", async () => {
 	assert.match(operatorRunSkill, /Use the `issue-loop` skill/);
 	assert.match(operatorRunSkill, /merge requires the `Merge` policy category/);
 	assert.match(operatorRunSkill, /never merge any other PR/);
+	assert.match(operatorRunSkill, /statusCheckRollup/);
+	assert.match(operatorRunSkill, /MERGEABLE/);
+	assert.match(operatorRunSkill, /PR not green/);
+	assert.match(operatorRunSkill, /the operator performs `gh issue close[^`]*` only after the merge is verified/);
 	assert.match(operatorRunSkill, /Do not claim validation, review, tracker changes, or tracker completion unless command output/);
 });
 
@@ -334,6 +340,11 @@ test("project config documents operator approval policy", async () => {
 	assert.match(projectConfigTemplate, /dry-run only/);
 	assert.match(projectConfig, /conditional operator merge/);
 	assert.match(projectConfig, /All other PRs remain human-merged/);
+	assert.match(projectConfig, /statusCheckRollup/);
+	assert.match(projectConfig, /mergeable: MERGEABLE/);
+	assert.match(projectConfig, /Max PR wait per issue: 15m/);
+	assert.match(projectConfig, /squash/);
+	assert.match(projectConfig, /Issue closure happens after merge/);
 	assert.match(operatorWorkflow, /Example: conservative repository policy/);
 	assert.match(operatorWorkflow, /Example: trusted\/high-automation repository policy/);
 });

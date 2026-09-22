@@ -139,7 +139,7 @@ Use the `groom` skill to groom the GitHub issue backlog for this repository.
 Arguments: --limit <configured batch size> --yes
 ```
 
-The delegated workflow owns its normal safety checks, validation, review, PR handling, and tracker completion rules. If it reports blocked or failed status, the operator must stop and report that result. Merge only under the conditional Merge policy rules above; never merge any other PR.
+The delegated workflow owns its normal safety checks, validation, review, PR handling, and tracker evidence reporting. Tracker completion ownership is split: when project config defers issue closure to post-merge, the delegated workflow leaves the issue open with completion evidence, and the operator performs `gh issue close <number> --reason completed` only after the merge is verified on the default branch. If the delegated workflow reports blocked or failed status, the operator must stop and report that result. Merge only under the conditional Merge policy rules above; never merge any other PR.
 
 ## 6. Loop continuation gate
 
@@ -192,7 +192,7 @@ Workflow summary:
 - Validation: <succeeded|skipped|failed> — <observed delegated result or not run>
 - Review: <succeeded|skipped|failed> — <observed delegated result or not run>
 - Tracker completion: <succeeded|skipped|failed> — <observed delegated result or not run>
-Stop reason: <completed one-shot action|dry-run plan completed|queue empty|blocked|failed|review blocking|review cannot run|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
+Stop reason: <completed one-shot action|dry-run plan completed|queue empty|blocked|failed|review blocking|review cannot run|PR not green|merge failed|merge verification failed|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
 Next recommended human action: <merge/review/fix/configure/run suggested command/no action>
 ```
 

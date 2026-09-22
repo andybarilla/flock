@@ -158,7 +158,7 @@ If the prior issue left an open branch with committed work or an open PR, decide
 
 ## 7. Final report
 
-Return a final stage-by-stage summary. Mark every stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Include the issue number, branch name when available, PR link when available, validation result, review verdict, tracker completion result, and next recommended human action. Do not claim validation, review, or tracker completion occurred unless command output was observed; copy or condense the issue worker's stage statuses when an issue was dispatched.
+Return a final stage-by-stage summary. Mark every stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Include the issue number, branch name when available, PR link when available, validation result, review verdict, tracker completion result, and next recommended human action. Do not claim validation, review, or tracker completion occurred unless command output was observed; copy or condense the issue worker's stage statuses when an issue was dispatched. When project config defers issue closure to post-merge, the worker leaves the issue open and reports closure as deferred; relay that status verbatim and never close the issue from the loop.
 
 ```md
 Processed: <count>

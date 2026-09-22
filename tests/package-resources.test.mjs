@@ -275,6 +275,11 @@ test("operator run workflow is exposed and bounded", async () => {
 	assert.match(operatorRunSkill, /gh pr merge <number> --squash/);
 	assert.match(operatorRunSkill, /verified check-wait command/);
 	assert.match(operatorRunSkill, /CHANGES_REQUESTED/);
+	assert.match(operatorRunSkill, /fail-closed/);
+	assert.match(operatorRunSkill, /An inconclusive result never merges/);
+	assert.match(operatorRunSkill, /resume target/);
+	assert.match(operatorRunSkill, /expected safe state/);
+	assert.match(operatorRunSkill, /ends the run instead of continuing/);
 	assert.match(operatorRunSkill, /the operator performs `gh issue close[^`]*` only after the merge is verified/);
 	assert.match(operatorRunSkill, /Do not claim validation, review, tracker changes, or tracker completion unless command output/);
 });

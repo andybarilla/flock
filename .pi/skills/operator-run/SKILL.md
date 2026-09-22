@@ -63,10 +63,13 @@ Recommended action priority:
 
 1. stop on dirty worktree, auth failure, missing required commands, or unexpected branch state
 2. stop or route to review when review is blocking, review cannot run, or review is clearly the safest bottleneck
-3. dispatch one ready issue when ready issues exist and issue selection for queued work is allowed
-4. triage one `needs-triage` issue when triage labels/comments are allowed and the triage limit permits it
-5. groom one bounded batch when grooming labels/comments are allowed and the grooming limit permits it
-6. stop when the queue is empty or no safe action exists
+3. resume a prior run's merge step when an open PR meets the resume criteria below; run the merge step from section 6 instead of redispatching its issue
+4. dispatch one ready issue when ready issues exist and issue selection for queued work is allowed
+5. triage one `needs-triage` issue when triage labels/comments are allowed and the triage limit permits it
+6. groom one bounded batch when grooming labels/comments are allowed and the grooming limit permits it
+7. stop when the queue is empty or no safe action exists
+
+Resume criteria — an open PR is a resume target only when all of these are observed: its head branch matches the configured issue branch pattern, its author is the authenticated account (`gh api user --jq .login`), its linked issue is open, and project config allows conditional merge. On resume, run the section 6 merge step; do not redispatch the issue. A PR failing any criterion is not a resume target: never merge it, and ask a human when ownership is ambiguous.
 
 This priority is a routing default only. Stop and ask if the safest action is ambiguous or issue scope is unclear.
 
@@ -164,10 +167,12 @@ Classification results:
 
 - `green`: every check satisfied (`SUCCESS`, `SKIPPED`, or `NEUTRAL`), no check pending, `mergeable: MERGEABLE`, and `reviewDecision` is `APPROVED` or empty (branch protection does not require review)
 - `pending`: any check in progress/queued/expected, `mergeable: UNKNOWN`, or `reviewDecision: REVIEW_REQUIRED`
-- `failing`: any check `FAILURE`, `CANCELLED`, `TIMED_OUT`, `ACTION_REQUIRED`, or `STARTUP_FAILURE`, or a status context in `ERROR`
+- `failing`: any check not satisfied — a `FAILURE`, `CANCELLED`, `TIMED_OUT`, `ACTION_REQUIRED`, or `STARTUP_FAILURE` conclusion, a status context in `ERROR`, or any unrecognized typename, conclusion, or state (the classifier is fail-closed: unrecognized values never classify as `green`)
 - `conflict`: `mergeable: CONFLICTING`
 - `blocking-review`: `reviewDecision: CHANGES_REQUESTED`
 - `unexpected-state:<state>`: the PR is not `OPEN`
+
+If the check-wait command errors or returns no classification, treat the poll as inconclusive: keep polling until the max PR wait, then stop with `PR not green`. An inconclusive result never merges.
 
 ### Poll, then merge or stop
 
@@ -190,10 +195,10 @@ If the sync fails or the merge commit is absent, stop with `merge verification f
 
 When `--loop` is set, repeat the one-cycle process only while all conditions remain safe:
 
-1. the prior delegated workflow succeeded without a blocking review, missing review, failed validation, unclear scope, failed tracker operation, or failed/blocked issue work
+1. the prior delegated workflow succeeded without a blocking review, missing review, failed validation, unclear scope, failed tracker operation, or failed/blocked issue work, and the section 6 merge step either was not applicable or ended in a verified merge — any merge stop reason (`PR not green`, `checks failing`, `merge conflict`, `unexpected PR state`, `merge failed`, `merge verification failed`) ends the run instead of continuing
 2. observed output includes the validation result, review verdict, tracker changes, issue/PR references, and delegated stop reason when applicable
 3. counters remain under max cycles, max issues, max grooming batches, max triage issues, and max runtime
-4. the repository returns to the expected safe state for the next action
+4. the repository returns to the expected safe state for the next action: clean worktree on the default branch, `git pull --ff-only` succeeds with HEAD matching `origin/<default>`, and no operator-created PR from this run remains open (the prior cycle's PR was merged and verified, or the cycle created no PR)
 5. project policy still allows the next selected action
 
 Before continuing to the next cycle, run:
@@ -201,10 +206,14 @@ Before continuing to the next cycle, run:
 ```bash
 git status --short
 git branch --show-current
+git pull --ff-only
+git rev-parse HEAD origin/HEAD
 gh pr list --state open --json number,title,url,headRefName,baseRefName,reviewDecision,statusCheckRollup --limit 20
 ```
 
-Stop instead of continuing when any of these occur: queue is empty, work is blocked, validation fails, review is blocking, review cannot run, issue scope is unclear, worktree is dirty, auth fails, branch state is unexpected, required commands fail, project config or approval policy is insufficient, or configured limits are reached.
+Confirm from the output: the worktree is clean, the current branch is the default branch, local HEAD matches origin, and no open PR head branch matches an issue branch from this run.
+
+Stop instead of continuing when any of these occur: queue is empty, work is blocked, validation fails, review is blocking, review cannot run, a merge stop reason occurred, issue scope is unclear, worktree is dirty, auth fails, branch state is unexpected, required commands fail, project config or approval policy is insufficient, or configured limits are reached.
 
 Do not continue after a failed or blocked issue in v1 unless project policy explicitly supports retries and the retry conditions are met. The default Flock retry policy is no retry.
 
@@ -224,11 +233,11 @@ Branch: <branch name when available, or "not created">
 PR: <PR link when available, or "not opened">
 Validation: <observed result from delegated workflow, or "not run">
 Review verdict: <observed verdict from delegated workflow, or "not run">
-Merge verdict: <merged and verified|PR not green|failing|conflict|blocking review|merge failed|merge verification failed|not run>
+Merge verdict: <merged and verified|PR not green|checks failing|merge conflict|review blocking|unexpected PR state|merge failed|merge verification failed|not run>
 Tracker completion: <observed completion result from delegated workflow or post-merge close, or "not run">
 Tracker changes: <labels/comments/issues closed or "none observed">
 Cycle log:
-- Cycle <n>: action=<work|triage|groom|review|stop>; issue=<#number|none>; PR=<url|none>; validation=<observed|not run>; review=<verdict|not run>; merge=<merged|not green|failed|not run>; tracker=<changes|none>; result=<succeeded|blocked|failed|stopped>
+- Cycle <n>: action=<work|triage|groom|review|stop>; issue=<#number|none>; PR=<url|none>; validation=<observed|not run>; review=<verdict|not run>; merge=<merged|not green|failed|not run>; tracker=<changes|none>; continue=<yes|no: reason>; result=<succeeded|blocked|failed|stopped>
 Workflow summary:
 - Preflight: <succeeded|skipped|failed> — <observed result or stop reason>
 - Project policy gate: <succeeded|skipped|failed> — <observed result or stop reason>

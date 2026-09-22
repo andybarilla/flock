@@ -11,9 +11,10 @@ $ARGUMENTS
 
 Default behavior:
 
-- inspect repository state, GitHub access, worktree state, project config, ready queue, triage queue, and open PRs as needed
-- read `docs/flock/project.md` before any mutating action
+- inspect repository state, GitHub access, worktree state, project config, ready queue, triage queue, likely grooming need, and open PR/review bottlenecks as needed
+- read `docs/flock/project.md` when present; always read it before any mutating action and report when it is missing
 - in dry-run/plan mode, do not mutate files, branches, labels, comments, pull requests, or issues
+- in dry-run/plan mode, recommend exactly one next action: `groom`, `work`, `review PR`, `triage`, `stop`, or `ask human`
 - in one-shot mode, require `--yes` or explicit human confirmation before mutation
 - refuse mutation when project config is missing or the Operator Approval Policy does not explicitly allow the selected approval category
 - execute at most one delegated action, then stop

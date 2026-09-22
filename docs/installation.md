@@ -80,21 +80,21 @@ Agent precedence:
 
 Later entries override earlier entries with the same name.
 
-## Smoke tests
+## First run and smoke tests
 
 After installing, run from any repository:
+
+```text
+/flock-status
+```
+
+Follow the recommended next command from the status report. If you want a secondary read-only validation for subagent delegation, run:
 
 ```text
 /scout-and-plan summarize this repository's build and test setup
 ```
 
-Then test a skill without making changes:
-
-```text
-Use the tech-lead skill in dry-run mode. Summarize which Flock workflow should handle a vague feature request.
-```
-
-For mutating delegation, start with a README-only change:
+For mutating delegation, start with a README-only change only when edits are expected:
 
 ```text
 /implement add a short note to README.md explaining how to run the project's tests

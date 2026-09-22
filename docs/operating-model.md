@@ -77,6 +77,12 @@ Test command:
 Review expectations:
 ```
 
+## Normal entry point
+
+Use `/flock-status` as the default starting command in a repository. It is read-only and status/routing only: it checks Flock readiness, flags blockers, and recommends the next command without implementation or file edits.
+
+Use `/lead` for deeper technical sequencing and `/scout-and-plan` for deeper read-only investigation after status identifies an unclear area.
+
 ## Project configuration
 
 When present, `docs/flock/project.md` is the repository-specific contract for Flock workflows. It records labels, branch naming, validation gates, PR policy, review policy, merge policy, retry policy, and workflow defaults.

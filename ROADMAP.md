@@ -58,6 +58,15 @@ Flock is a pi package with a `package.json` manifest loading:
 
 Install docs live in `docs/installation.md`. The subagent extension loads bundled `.pi/agents` directly because pi packages do not have a native agents resource type.
 
+## Default status entry point
+
+Resources:
+
+- `.pi/prompts/flock-status.md`
+- `.pi/skills/flock-status/SKILL.md`
+
+Status: added as the read-only, skill-only default starting command for repo/Flock readiness and next workflow routing.
+
 ## Phase 2: GitHub issue worker
 
 Add issue-driven implementation.
@@ -163,9 +172,11 @@ Additional resources:
 - `.pi/skills/engineering-manager/SKILL.md`
 - `.pi/agents/engineering-manager.md`
 
-Planned resources:
+Additional resources:
 
+- `.pi/prompts/product.md`
 - `.pi/skills/product-manager/SKILL.md`
+- `.pi/agents/product-manager.md`
 
 Goals:
 
@@ -175,4 +186,4 @@ Goals:
 - Coordinate reviews and releases.
 - Turn product intent into agent-ready issues.
 
-Status: initial tech-lead and engineering-manager skill/template/agent sets added.
+Status: initial tech-lead, engineering-manager, and product-manager skill/template/agent sets added.

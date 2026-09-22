@@ -6,6 +6,7 @@ Pi-native skills, prompt templates, agents, and extensions for managing software
 
 Prompt templates:
 
+- `/flock-status` — default Flock starting command for status, readiness, and next workflow routing
 - `/dev` — implement a development task with the Flock IC workflow
 - `/review` — review code changes with the Flock review workflow
 - `/pr-review` — review a GitHub pull request
@@ -14,13 +15,15 @@ Prompt templates:
 - `/groom` — classify GitHub issues toward a ready-for-agent queue target
 - `/project-config` — create or check repo-specific Flock configuration
 - `/manager` — assess repo/team status, queue health, blockers, and next action
+- `/product` — shape product goals into requirements, priorities, and agent-ready issue briefs
 - `/lead` — plan, sequence, decompose, and route technical work
-- `/scout-and-plan` — delegate read-only reconnaissance and planning
+- `/scout-and-plan` — delegate deeper read-only reconnaissance and planning after status identifies an unclear area
 - `/implement` — delegate scout → planner → IC implementation
 - `/implement-and-review` — delegate implementation → review → fix pass
 
 Skills:
 
+- `flock-status` — read-only repo/Flock health check and recommended next command
 - `ic-dev` — individual contributor implementation workflow
 - `ic-review` — code review workflow
 - `github-issue-worker` — work one GitHub issue
@@ -29,6 +32,7 @@ Skills:
 - `groom` — classify GitHub issues and stock the ready queue
 - `project-config` — create or check `docs/flock/project.md`
 - `engineering-manager` — assess status, queue health, blockers, and next action
+- `product-manager` — shape product goals into requirements, priorities, and agent-ready issue briefs
 - `tech-lead` — plan, sequence, decompose, and route technical work
 
 Agents for subagent delegation:
@@ -39,20 +43,21 @@ Agents for subagent delegation:
 - `ic-review`
 - `tech-lead`
 - `engineering-manager`
+- `product-manager`
 
 Extension:
 
 - `.pi/extensions/flock-subagent` — registers the `subagent` tool, adapted from pi's subagent example
 
-## Testing subagents
+## Starting with Flock
 
-For a first subagent test, use the read-only workflow/agents in `/scout-and-plan`:
+Start with the read-only status command:
 
 ```text
-/scout-and-plan "<small repo question>"
+/flock-status
 ```
 
-This is the safest starting point because it chains only `scout` and `planner`, passes the scout findings into the planner, and explicitly stops before implementation. By contrast, `/implement` and `/implement-and-review` continue into the mutating `ic-dev` workflow, so save those for tasks where edits are expected.
+It checks repo/Flock readiness and recommends the next command. Use `/scout-and-plan "<small repo question>"` later when status identifies an unclear area that needs deeper read-only reconnaissance and planning. `/implement` and `/implement-and-review` continue into the mutating `ic-dev` workflow, so save those for tasks where edits are expected.
 
 ## Installation
 

@@ -403,6 +403,34 @@ test("operator herdr worker dispatch is gated, fail-stop, and independently veri
 	assert.match(projectConfig, /absent = herdr dispatch disabled|absent, herdr dispatch is disabled/);
 });
 
+test("operator herdr post-merge cleanup removes run-created worktrees and itemizes leftovers", async () => {
+	const operatorRunSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-run", "SKILL.md"), "utf8");
+	const projectConfig = await readFile(join(repoRoot, "docs", "flock", "project.md"), "utf8");
+
+	// Post-merge removal of the run-created worktree after verified merge + issue close.
+	assert.match(operatorRunSkill, /herdr worktree remove --workspace <workspace-id>/);
+	assert.match(operatorRunSkill, /scoped strictly to resources created in the current run/);
+	assert.match(operatorRunSkill, /Never remove a pre-existing or previous-run worktree/);
+	assert.match(operatorRunSkill, /A removal failure is non-fatal/);
+
+	// Failed/blocked/timeout workers stay in place and are itemized in the final run log.
+	assert.match(operatorRunSkill, /never remove a failed, blocked, timed-out, or stalled worker's pane or worktree/);
+	assert.match(operatorRunSkill, /left in place for human inspection/);
+	assert.match(operatorRunSkill, /agent name, workspace ID, worktree path, stop reason/);
+	assert.match(operatorRunSkill, /Follow-up items:/);
+	assert.match(operatorRunSkill, /previous runs are report-only follow-up items/);
+
+	// Stale cleanup wording is gone from both documents.
+	assert.doesNotMatch(operatorRunSkill, /worktree cleanup is out of scope for the operator/);
+	assert.doesNotMatch(operatorRunSkill, /worktree cleanup is a separate post-merge concern/);
+	assert.doesNotMatch(projectConfig, /Worktree cleanup after merge is handled separately/);
+
+	// Project config documents post-merge cleanup and report-only stale worktrees.
+	assert.match(projectConfig, /Post-merge cleanup: after a verified merge and issue close/);
+	assert.match(projectConfig, /herdr worktree remove --workspace/);
+	assert.match(projectConfig, /report-only, never auto-removed/);
+});
+
 test("operator dry-run plan workflow is exposed and read-only", async () => {
 	const operatorPlanSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-plan", "SKILL.md"), "utf8");
 	const operatorRunSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-run", "SKILL.md"), "utf8");

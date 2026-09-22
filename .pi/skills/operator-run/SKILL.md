@@ -189,7 +189,7 @@ Issue selection is unchanged from the in-session flow: the operator selects the 
    - `agent_prompt_stalled`: stop with `worker stalled`. A stall does not prove non-delivery; never re-prompt.
    - `agent_not_ready` at prompt time: stop with `worker not ready`.
 
-   Each stop leaves the worktree, branch, and agent in place for human inspection (worktree cleanup is out of scope for the operator) and ends the run with the matching reason. `herdr agent read` may be used to capture diagnostic output for the stop report, but diagnostics never substitute for the handoff file or independent verification.
+   Each stop leaves the pane, worktree, branch, and agent in place for human inspection — never remove a failed, blocked, timed-out, or stalled worker's pane or worktree — and ends the run with the matching reason. Record the stopped worker (agent name, workspace ID, worktree path, stop reason) for itemized reporting as a follow-up item in the final run log (section 8). `herdr agent read` may be used to capture diagnostic output for the stop report, but diagnostics never substitute for the handoff file or independent verification.
 
 ### Handoff file convention
 
@@ -259,6 +259,13 @@ After a verified merge:
 
 1. sync the default branch: `git checkout main && git pull --ff-only` (or the configured default branch), and confirm the squash merge commit appears in `git log --oneline origin/<default> -5`
 2. post the completion-evidence comment (issue number, branch, PR link, validation result, review verdict, merge commit) and close the issue: `gh issue close <number> --reason completed`
+3. when the cycle ran under Herdr dispatch, remove the run-created worktree and its workspace, using the workspace ID recorded from the `herdr worktree create` JSON response at creation time in this run (section 5a step 1):
+
+   ```bash
+   herdr worktree remove --workspace <workspace-id>
+   ```
+
+   Removal is scoped strictly to resources created in the current run: only remove a worktree whose workspace ID, root pane ID, and path were recorded from a `herdr worktree create` response earlier in this same run. Never remove a pre-existing or previous-run worktree, workspace, or pane — those are report-only follow-up items. A removal failure is non-fatal: the merge and issue close already happened, so record the failed removal (agent name, workspace ID, worktree path, observed error) as a follow-up item in the final run log and continue.
 
 If the sync fails or the merge commit is absent, stop with `merge verification failed` and report the merged PR with the divergence. Claim tracker completion in the run log only from the observed close command output.
 
@@ -269,7 +276,7 @@ When `--loop` is set, repeat the one-cycle process only while all conditions rem
 1. the prior delegated workflow succeeded without a blocking review, missing review, failed validation, unclear scope, failed tracker operation, or failed/blocked issue work, and the section 6 merge step either was not applicable or ended in a verified merge — any merge stop reason (`PR not green`, `checks failing`, `merge conflict`, `unexpected PR state`, `merge failed`, `merge verification failed`) ends the run instead of continuing
 2. observed output includes the validation result, review verdict, tracker changes, issue/PR references, and delegated stop reason when applicable
 3. counters remain under max cycles, max issues, max grooming batches, max triage issues, and max runtime
-4. the repository returns to the expected safe state for the next action: clean worktree on the default branch, `git pull --ff-only` succeeds with HEAD matching `origin/<default>`, and no operator-created PR from this run remains open (the prior cycle's PR was merged and verified, or the cycle created no PR). Under Herdr dispatch the operator's own checkout never leaves the default branch; the nested worker's worktree and branch remain in place for inspection and do not dirty the operator checkout (worktree cleanup is a separate post-merge concern)
+4. the repository returns to the expected safe state for the next action: clean worktree on the default branch, `git pull --ff-only` succeeds with HEAD matching `origin/<default>`, and no operator-created PR from this run remains open (the prior cycle's PR was merged and verified, or the cycle created no PR). Under Herdr dispatch the operator's own checkout never leaves the default branch; a completed cycle's run-created worktree was already removed in the section 6 post-merge step, and a stopped worker's worktree and pane remain in place for human inspection without dirtying the operator checkout
 5. project policy still allows the next selected action
 
 Before continuing to the next cycle, run:
@@ -293,6 +300,8 @@ Do not continue after a failed or blocked issue in v1 unless project policy expl
 
 Return a stage-by-stage summary for one-shot mode, and a Final run log for loop mode. Mark each stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Do not claim validation, review, tracker changes, or tracker completion unless command output from the underlying workflow was observed. A resume cycle (`action=resume`) counts toward max cycles and max issues like a work cycle.
 
+Itemize leftover Herdr state as follow-up items: every failed, blocked, timed-out, or stalled worker left in place for human inspection (agent name, workspace ID, worktree path, stop reason), and every post-merge worktree removal that failed (agent name, workspace ID, worktree path, observed error). Stale worktrees or workspaces from previous runs are report-only follow-up items — the operator never removes them.
+
 ```md
 Mode: <dry-run|one-shot|loop>
 Repository: <owner/name>
@@ -311,6 +320,8 @@ Tracker completion: <observed completion result from delegated workflow or post-
 Tracker changes: <labels/comments/issues closed or "none observed">
 Cycle log:
 - Cycle <n>: action=<work|resume|triage|groom|review|stop>; issue=<#number|none>; agent=<issue-<n>|none>; pane=<pane-id|none>; workspace=<workspace-id|none>; worktree=<path|none>; handoff=<path|none>; PR=<url|none>; validation=<observed|not run>; review=<verdict|not run>; verification=<branch/PR/validation/review re-verified by supervisor|not run>; merge=<merged|not green|failed|not run>; tracker=<changes|none>; continue=<yes|no: reason>; result=<succeeded|blocked|failed|stopped>
+Follow-up items:
+- <leftover worker or failed cleanup: agent name, workspace ID, worktree path, stop reason or observed error; previous-run stale worktrees reported here only; or "none">
 Workflow summary:
 - Preflight: <succeeded|skipped|failed> — <observed result or stop reason>
 - Project policy gate: <succeeded|skipped|failed> — <observed result or stop reason>

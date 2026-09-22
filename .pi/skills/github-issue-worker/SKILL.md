@@ -214,7 +214,7 @@ Keep implementation and review roles separate:
 - Do not review your own implementation inline as a substitute for `pr-review` or `ic-review`.
 - When the `subagent` tool is available, prefer delegating local-diff review to the project `ic-review` agent.
 - Do not run an automatic fix pass from this workflow; report review findings and verdict only.
-- Do not auto-merge. Human merge remains manual.
+- Do not auto-merge. The worker never merges; merge is handled post-handoff per project config (by the operator under its Merge policy, or by a human).
 
 The review output must include findings and a merge/readiness verdict, using the review workflow's verdict format.
 
@@ -230,6 +230,8 @@ gh issue close <number> --reason completed
 ```
 
 The completion comment must include the issue number, branch name, PR link when available, validation result, review verdict, and next recommended human action. Do not close the issue when implementation is incomplete, validation failed, review is blocking, the workflow is blocked, or required review could not run. Leave the issue open with a clear status comment when useful.
+
+**Closure deferral to post-merge:** When `docs/flock/project.md` defers issue closure to post-merge (a conditional Merge policy, or a tracker completion policy that closes only after verified merge), the worker must not close the issue. Post the completion-evidence comment, state in it that closure is deferred until the PR is merged and verified, and report tracker completion in the handoff as `deferred — closure after merge per project config`. The supervising operator (under its explicit Merge approval policy) or a human runs `gh issue close` after merge verification. When closure is deferred, closing is the supervisor's or the human's decision, never the worker's.
 
 This is a tracker completion step, not a GitHub PR-body convention. Keep wording neutral so future non-GitHub trackers can map this stage to their own "mark complete" action.
 

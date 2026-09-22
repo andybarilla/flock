@@ -109,9 +109,8 @@ gh pr create --fill
 
 Tracker completion policy:
 - Use neutral PR references such as `Refs #<number>`; do not rely on PR auto-close wording to complete issues.
-- After successful issue work, explicitly comment with completion evidence and close the GitHub issue with `gh issue close <number> --reason completed`.
-- Close only after implementation, observed validation, PR/update preparation when applicable, and required review have succeeded with no blocking verdict.
-- Leave the issue open when work is blocked, validation fails, review is blocking, or required review cannot run.
+- Issue closure happens after merge: close with `gh issue close <number> --reason completed` and a completion-evidence comment only after the PR is merged (by a human, or by the operator under the Merge policy below) and the merge is verified on `main`.
+- Leave the issue open when work is blocked, validation fails, review is blocking, required review cannot run, or the PR is still unmerged.
 - Check commit messages for accidental closing keywords before opening the PR.
 
 ## Review
@@ -136,11 +135,16 @@ Blocking bar:
 
 ## Merge
 
-Policy: human merges
+Policy: conditional operator merge
 
 Notes:
-- Flock v1 workflows never auto-merge.
-- Do not add dispatcher merge behavior until there is an explicit user decision and a verified check-wait command.
+- The operator may squash-merge a pull request only when all of the following are observed from `gh` output: every `statusCheckRollup` entry successful (none pending or failing), `mergeable: MERGEABLE` (no conflicts), Flock review verdict non-blocking, and `reviewDecision: APPROVED` when required by branch protection (not required otherwise).
+- Merge scope: only PRs opened by the operator in the current run. All other PRs remain human-merged.
+- Merge method: squash. Flock never deletes branches; the GitHub auto-delete-on-merge setting handles branch cleanup.
+- The operator polls for green up to `Max PR wait` and stops cleanly with reason "PR not green" on timeout, leaving a resumable handoff. It never waits indefinitely.
+- Merge without this policy section, or of any PR failing a green criterion, is refused.
+- Dispatcher merge behavior additionally requires a verified check-wait command (tracked in #29) before it ships; this section is the policy decision that unblocks it.
+- Issue closure moves to post-merge (see Tracker completion policy above).
 
 ## Retry
 
@@ -161,14 +165,15 @@ Approval categories:
 - Branch creation: auto-approve for issue branches matching `flock/issue-<number>-<short-slug>` from `main`.
 - Commits: auto-approve scoped commits on the issue branch after validation has been run.
 - PR creation/update: auto-approve PR creation or updates using neutral `Refs #<number>` references.
-- Tracker completion/issue close: auto-approve only through the issue worker completion policy after implementation, observed validation, PR preparation when applicable, and non-blocking review.
-- Merge: never; human merge remains required.
+- Tracker completion/issue close: auto-approve only through the issue worker completion policy after verified merge of the issue's PR on `main`.
+- Merge: auto-approve squash merge of PRs opened by the operator in the current run when green per the Merge policy above; all other PRs remain human-merged.
 
 Limits:
 - Max cycles per operator run: 5
 - Max issues worked per operator run: 3
 - Max grooming batches per operator run: 1
 - Max triage issues per operator run: 5
+- Max PR wait per issue: 15m
 - Max runtime: ask when launching the operator
 
 Stop conditions:
@@ -187,7 +192,7 @@ Groom target depth: 6
 Groom batch size: 10
 Issue loop default limit: 1
 Confirm before starting queued issue: yes
-Auto-merge: no
+Auto-merge: conditional (squash merge of operator-run PRs only, when green per the Merge policy)
 
 ## Project Notes
 

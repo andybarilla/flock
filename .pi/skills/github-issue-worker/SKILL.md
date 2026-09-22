@@ -24,6 +24,18 @@ Accept any of:
 
 If no issue is identifiable, ask for it.
 
+## Herdr worktree dispatch (nested worker mode)
+
+The `operator-run` skill may dispatch this workflow into a nested pi session running inside a Herdr-created worktree. The dispatch prompt states this mode and passes the absolute handoff file path. When dispatched this way:
+
+- The worktree is the cwd. The issue branch already exists and is checked out in the worktree (the supervisor created it via `herdr worktree create`); skip step 5 branch creation. First confirm `git branch --show-current` matches the expected `flock/issue-<number>-<short-slug>` branch and `git status --short` is clean; stop as blocked on any mismatch.
+- Confine every edit and commit to this worktree. Never `cd` into another checkout, never create or switch branches, never touch the supervisor's checkout.
+- Push and open the PR from the issue branch as usual (step 8).
+- Write the final handoff (the step 11 format, or the blocked format from step 3) to the handoff file path from the dispatch prompt, in addition to returning it. Never commit the handoff file.
+- If blocked, write the BLOCKED handoff to the handoff file and stop; do not wait for human input, and do not expect the supervisor to answer approval dialogs.
+
+Everything else in this workflow is unchanged: project config, dispatchability check, restate done, implement, verify, commit/PR, review handoff, and tracker completion policy all still apply. The supervisor independently re-verifies every claim in the handoff, so record only observed command output.
+
 ## 1. Preflight
 
 Confirm this is a Git repository with a GitHub remote:

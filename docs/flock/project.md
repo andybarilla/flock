@@ -172,6 +172,26 @@ gh pr view <number> --json state,mergeable,reviewDecision,statusCheckRollup --jq
 - `SKIPPED` and `NEUTRAL` check conclusions count as satisfied, matching GitHub branch protection semantics. An empty `statusCheckRollup` (no CI configured) is vacuously green on checks; `mergeable`, review verdict, and `reviewDecision` still apply.
 - Issue closure moves to post-merge (see Tracker completion policy above).
 
+## Herdr
+
+Herdr worker dispatch: enabled. When the operator runs inside Herdr (`HERDR_ENV=1`), it dispatches each worked issue to a nested pi agent in a Herdr worktree pane instead of working the issue in its own checkout (see the `operator-run` skill, section 5a). When this section is absent, herdr dispatch is disabled and the operator uses the in-session flow unchanged; `HERDR_ENV` without this section also means the in-session flow.
+
+Worktree pattern:
+- Branch: `flock/issue-<number>-<short-slug>` (the issue branch pattern above)
+- Path: `../flock-wt-issue-<number>`
+- Base: `main` (the default branch)
+
+Create command shape:
+
+```bash
+herdr worktree create --cwd "$(git rev-parse --show-toplevel)" --branch flock/issue-<number>-<short-slug> --base main --path ../flock-wt-issue-<number> --label "issue-<number>" --no-focus
+```
+
+Worker agent: kind `pi`, name `issue-<number>`, started with `herdr agent start` in the worktree pane returned by the create command.
+Per-issue worker timeout: 45m (bounded further by remaining Max runtime).
+Handoff file: `<worktree-root>/.flock/handoff-issue-<number>.md`, written by the nested worker, read by the supervisor, never committed.
+Worktree cleanup after merge is handled separately (not part of dispatch).
+
 ## Retry
 
 Policy: no retry

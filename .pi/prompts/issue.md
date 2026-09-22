@@ -15,4 +15,5 @@ Default behavior:
 - implement with the Flock IC workflow
 - verify with real command output
 - prepare or open a PR
-- return a structured handoff
+- automatically run separate review when there is a PR or reviewable diff
+- return a structured handoff with review verdict or a clear reason review did not run

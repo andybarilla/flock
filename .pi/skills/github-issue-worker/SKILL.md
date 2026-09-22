@@ -184,7 +184,26 @@ gh pr create --fill
 
 Use `Refs #<number>` unless the issue should definitely close when merged. Use `Closes #<number>` only when the entire issue is completed by this PR.
 
-## 9. Handoff
+## 9. Automatic review handoff
+
+After successful implementation and verification, invoke a separate review role before the final handoff when there is a review target.
+
+Review target detection:
+
+1. If a PR was opened or updated, review that PR with the `pr-review` workflow.
+2. Otherwise, if there is a reviewable local diff against the base branch, review that diff with the `ic-review` workflow.
+3. If there is no PR and no reviewable diff, stop and explain clearly that review could not run because no review target exists.
+
+Keep implementation and review roles separate:
+
+- Do not review your own implementation inline as a substitute for `pr-review` or `ic-review`.
+- When the `subagent` tool is available, prefer delegating local-diff review to the project `ic-review` agent.
+- Do not run an automatic fix pass from this workflow; report review findings and verdict only.
+- Do not auto-merge. Human merge remains manual.
+
+The review output must include findings and a merge/readiness verdict, using the review workflow's verdict format.
+
+## 10. Handoff
 
 Return exactly:
 
@@ -194,6 +213,7 @@ Branch: <branch>
 PR: <url or "not opened">
 Changed: <one or two sentences>
 Verified: <commands run and observed result>
+Review: <review target and verdict, or clear reason review did not run>
 Left out: <or "nothing">
 Unsure about: <or "nothing">
 ```

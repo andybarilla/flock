@@ -198,8 +198,9 @@ test("supervised issue workflows require accurate final stage summaries", async 
 		assert.match(content, /PR link/);
 		assert.match(content, /validation result/);
 		assert.match(content, /review verdict/);
+		assert.match(content, /tracker completion/);
 		assert.match(content, /next recommended human action/);
-		assert.match(content, /Do not claim validation or review occurred unless command output was observed/);
+		assert.match(content, /Do not claim validation, review, or tracker completion occurred unless command output was observed/);
 	}
 
 	assert.match(issueWorkerSkill, /Issue selection: <succeeded\|skipped\|failed/);
@@ -208,10 +209,29 @@ test("supervised issue workflows require accurate final stage summaries", async 
 	assert.match(issueWorkerSkill, /Validation: <succeeded\|skipped\|failed/);
 	assert.match(issueWorkerSkill, /PR creation\/update: <succeeded\|skipped\|failed/);
 	assert.match(issueWorkerSkill, /Review: <succeeded\|skipped\|failed/);
+	assert.match(issueWorkerSkill, /Tracker completion: <succeeded\|skipped\|failed/);
 	assert.match(issueWorkerSkill, /BLOCKED: <reason>/);
 	assert.match(issueWorkerSkill, /Next recommended human action: <question, decomposition, or human action>/);
 	assert.match(issueWorkerSkill, /skipped — not run/);
 	assert.match(issueLoopSkill, /copy or condense the issue worker's stage statuses/);
+});
+
+test("issue workflow explicitly completes tracker items without PR auto-close wording", async () => {
+	const issuePrompt = await readFile(join(repoRoot, ".pi", "prompts", "issue.md"), "utf8");
+	const workPrompt = await readFile(join(repoRoot, ".pi", "prompts", "work.md"), "utf8");
+	const issueWorkerSkill = await readFile(join(repoRoot, ".pi", "skills", "github-issue-worker", "SKILL.md"), "utf8");
+	const projectConfigTemplate = await readFile(join(repoRoot, ".pi", "skills", "project-config", "TEMPLATE.md"), "utf8");
+	const projectConfig = await readFile(join(repoRoot, "docs", "flock", "project.md"), "utf8");
+
+	assert.match(issuePrompt, /explicitly mark the tracker item complete/);
+	assert.match(workPrompt, /explicit tracker completion rather than PR auto-close wording/);
+	assert.match(issueWorkerSkill, /## 10\. Complete tracker item/);
+	assert.match(issueWorkerSkill, /gh issue close <number> --reason completed/);
+	assert.match(issueWorkerSkill, /Do not close the issue when implementation is incomplete, validation failed, review is blocking/);
+	assert.match(issueWorkerSkill, /Use neutral references such as `Refs #<number>`/);
+	assert.doesNotMatch(issueWorkerSkill, /Use `Closes #<number>`/);
+	assert.match(projectConfigTemplate, /Tracker completion policy/);
+	assert.match(projectConfig, /Tracker completion policy/);
 });
 
 test("skills load from .pi/skills with required descriptions", () => {

@@ -80,6 +80,7 @@ Branch: <branch name when available, or "not created">
 PR: <PR link when available, or "not opened">
 Validation: <validation result, or "not run">
 Review: <review verdict, or "not run">
+Tracker completion: <completion result, or "not run">
 Workflow summary:
 - Issue selection: <succeeded|skipped|failed> — <observed result or stop reason>
 - Branch setup: <succeeded|skipped|failed> — <observed result or stop reason>
@@ -87,6 +88,7 @@ Workflow summary:
 - Validation: <succeeded|skipped|failed> — <observed result or stop reason>
 - PR creation/update: <succeeded|skipped|failed> — <observed result or stop reason>
 - Review: <succeeded|skipped|failed> — <observed result or stop reason>
+- Tracker completion: <succeeded|skipped|failed> — <observed result or stop reason>
 Next recommended human action: <question, decomposition, or human action>
 Needed: <question, decomposition, or human action>
 ```
@@ -170,7 +172,7 @@ git diff --stat
 git diff --check
 ```
 
-Do not claim a check passed unless you read its output. Record the observed command output/result for the final validation result. Do not claim validation or review occurred unless command output was observed.
+Do not claim a check passed unless you read its output. Record the observed command output/result for the final validation result. Do not claim validation, review, or tracker completion occurred unless command output was observed.
 
 ## 8. Commit and PR
 
@@ -182,7 +184,7 @@ git add <files>
 git commit -m "<concise issue-focused message>"
 ```
 
-Before opening a PR, inspect commits for accidental closing keywords when the issue should remain open:
+Before opening a PR, inspect commits for accidental closing keywords. Flock completion is an explicit tracker step, not PR auto-close behavior:
 
 ```bash
 git log --oneline --decorate origin/main..HEAD || git log --oneline --decorate origin/master..HEAD
@@ -195,7 +197,7 @@ git push -u origin HEAD
 gh pr create --fill
 ```
 
-Use `Refs #<number>` unless the issue should definitely close when merged. Use `Closes #<number>` only when the entire issue is completed by this PR.
+Use neutral references such as `Refs #<number>` in PR text. Do not rely on PR closing keywords to complete tracker items; completion is handled after validation and review.
 
 ## 9. Automatic review handoff
 
@@ -216,9 +218,24 @@ Keep implementation and review roles separate:
 
 The review output must include findings and a merge/readiness verdict, using the review workflow's verdict format.
 
-## 10. Handoff
+## 10. Complete tracker item
 
-Return exactly this final stage-by-stage summary. Mark every stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Include the issue number, branch name when available, PR link when available, validation result, review verdict, and next recommended human action. Do not claim validation or review occurred unless command output was observed; use `skipped — not run` when a stage did not run.
+After implementation, observed validation, PR creation/update when applicable, and required review have all succeeded with no blocking review verdict, explicitly mark the tracker item complete before the final handoff.
+
+For GitHub Issues:
+
+```bash
+gh issue comment <number> --body '<completion evidence>'
+gh issue close <number> --reason completed
+```
+
+The completion comment must include the issue number, branch name, PR link when available, validation result, review verdict, and next recommended human action. Do not close the issue when implementation is incomplete, validation failed, review is blocking, the workflow is blocked, or required review could not run. Leave the issue open with a clear status comment when useful.
+
+This is a tracker completion step, not a GitHub PR-body convention. Keep wording neutral so future non-GitHub trackers can map this stage to their own "mark complete" action.
+
+## 11. Handoff
+
+Return exactly this final stage-by-stage summary. Mark every stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Include the issue number, branch name when available, PR link when available, validation result, review verdict, tracker completion result, and next recommended human action. Do not claim validation, review, or tracker completion occurred unless command output was observed; use `skipped — not run` when a stage did not run.
 
 ```md
 Issue: #<number> <title>
@@ -226,6 +243,7 @@ Branch: <branch name when available, or "not created">
 PR: <PR link when available, or "not opened">
 Validation: <validation result from observed command output, or "not run">
 Review verdict: <review verdict from observed review output, or "not run">
+Tracker completion: <completion result from observed tracker command output, or "not run">
 Workflow summary:
 - Issue selection: <succeeded|skipped|failed> — <observed result or stop reason>
 - Branch setup: <succeeded|skipped|failed> — <observed result or stop reason>
@@ -233,9 +251,11 @@ Workflow summary:
 - Validation: <succeeded|skipped|failed> — <observed result or stop reason>
 - PR creation/update: <succeeded|skipped|failed> — <observed result or stop reason>
 - Review: <succeeded|skipped|failed> — <observed result or stop reason>
+- Tracker completion: <succeeded|skipped|failed> — <observed result or stop reason>
 Changed: <one or two sentences>
 Verified: <commands run and observed result, or "not run">
 Review: <review target and verdict, or clear reason review did not run>
+Tracker completion: <tracker item closed/marked complete, left open with reason, or not run>
 Next recommended human action: <merge/review/fix/unblock/no action, based only on observed results>
 Left out: <or "nothing">
 Unsure about: <or "nothing">
@@ -250,5 +270,5 @@ If blocked, use the blocked format from step 3 with the same stage names and evi
 | "The ready label means it is implementable." | Read the issue and comments; labels can be stale. |
 | "I can combine this with nearby cleanup." | One issue means one scoped change. |
 | "A comment asked a question, so it is blocked." | Later comments may answer it; read chronologically. |
-| "The PR body says Refs, so closing keywords are safe in commits." | GitHub can close from the squash commit body. Check commit messages. |
+| "The PR body says Refs, so closing keywords are safe in commits." | GitHub can close from the squash commit body. Check commit messages and use explicit tracker completion instead. |
 | "The subagent did the work, so I don't need to inspect anything." | You still own the handoff and verification claims. |

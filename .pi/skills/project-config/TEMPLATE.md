@@ -63,9 +63,11 @@ git push -u origin HEAD
 gh pr create --fill
 ```
 
-Issue closing policy:
-- Use `Closes #<number>` only when the PR completes the whole issue.
-- Use `Refs #<number>` when the issue should remain open.
+Tracker completion policy:
+- Use neutral PR references such as `Refs #<number>`; do not rely on PR auto-close wording to complete issues.
+- After successful issue work, explicitly comment with completion evidence and close the tracker item.
+- Close only after implementation, observed validation, PR/update preparation when applicable, and required review have succeeded with no blocking verdict.
+- Leave the tracker item open when work is blocked, validation fails, review is blocking, or required review cannot run.
 - Check commit messages for accidental closing keywords before opening the PR.
 
 ## Review

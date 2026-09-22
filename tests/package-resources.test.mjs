@@ -57,6 +57,7 @@ const expectedSkillNames = [
 	"ic-dev",
 	"ic-review",
 	"issue-loop",
+	"operator-plan",
 	"operator-run",
 	"pr-review",
 	"product-manager",
@@ -245,7 +246,8 @@ test("operator run workflow is exposed and bounded", async () => {
 	const operatorRunSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-run", "SKILL.md"), "utf8");
 
 	assert.match(operatePrompt, /Use the `operator-run` skill/);
-	assert.match(operatePrompt, /read `docs\/flock\/project\.md` before any mutating action/);
+	assert.match(operatePrompt, /read `docs\/flock\/project\.md` when present/);
+	assert.match(operatePrompt, /recommend exactly one next action/);
 	assert.match(operatePrompt, /execute at most one delegated action, then stop/);
 	assert.match(operatePrompt, /never auto-merge/);
 	assert.match(operatePrompt, /Do not claim validation, review, tracker changes, or tracker completion occurred unless command output was observed/);
@@ -262,6 +264,24 @@ test("operator run workflow is exposed and bounded", async () => {
 	assert.match(operatorRunSkill, /Use the `issue-loop` skill/);
 	assert.match(operatorRunSkill, /Never auto-merge/);
 	assert.match(operatorRunSkill, /Do not claim validation, review, tracker changes, or tracker completion unless command output/);
+});
+
+test("operator dry-run plan workflow is exposed and read-only", async () => {
+	const operatorPlanSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-plan", "SKILL.md"), "utf8");
+	const operatorRunSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-run", "SKILL.md"), "utf8");
+
+	assert.match(operatorRunSkill, /Follow the read-only `operator-plan` contract/);
+	assert.match(operatorRunSkill, /Recommended action: <groom\|work\|review PR\|triage\|stop\|ask human>/);
+	assert.match(operatorRunSkill, /Would mutate: no/);
+
+	assert.match(operatorPlanSkill, /Produce exactly one read-only dry-run Flock operator plan/);
+	assert.match(operatorPlanSkill, /If `docs\/flock\/project\.md` is present, read it before recommending an action/);
+	assert.match(operatorPlanSkill, /likely grooming need/);
+	assert.match(operatorPlanSkill, /triage queue status/);
+	assert.match(operatorPlanSkill, /Recommend exactly one next action/);
+	assert.match(operatorPlanSkill, /`review PR`/);
+	assert.match(operatorPlanSkill, /Would mutate: no/);
+	assert.match(operatorPlanSkill, /Do not run mutating commands/);
 });
 
 test("project config documents operator approval policy", async () => {

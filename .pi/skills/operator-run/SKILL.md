@@ -50,6 +50,7 @@ Gather enough state to choose one next action without mutating:
 ```bash
 gh issue list --state open --label ready-for-agent --json number,title,labels,updatedAt,url --limit 50
 gh issue list --state open --label needs-triage --json number,title,labels,updatedAt,url --limit 50
+gh issue list --state open --json number,title,labels,updatedAt,url --limit 50
 gh pr list --state open --json number,title,url,headRefName,baseRefName,reviewDecision,statusCheckRollup --limit 20
 ```
 
@@ -68,17 +69,28 @@ This priority is a routing default only. Stop and ask if the safest action is am
 
 ## 3. Dry-run output
 
-For `--dry-run` or `--plan`, do not mutate. Return a stage-by-stage plan with:
+For `--dry-run` or `--plan`, do not mutate. Follow the read-only `operator-plan` contract: inspect repository identity, GitHub access, worktree safety, project config, ready queue, triage queue, likely grooming need, open PR/review bottlenecks, and blockers. Recommend exactly one next action: `groom`, `work`, `review PR`, `triage`, `stop`, or `ask human`. Explain why relevant alternatives were not selected.
+
+Return a concise stage-by-stage plan with:
 
 ```md
 Mode: dry-run
 Repository: <owner/name>
 Project config: <found/missing and approval policy summary>
-Worktree: <clean/dirty>
-Recommended action: <work|triage|groom|review|stop|ask human>
+Worktree: <clean|dirty; current branch>
+GitHub access: <ok|failed>
+Queues:
+- Ready: <count and first issue when available>
+- Triage: <count and first issue when available>
+- Backlog/grooming: <short observed state>
+PRs/review: <short observed state>
+Recommended action: <groom|work|review PR|triage|stop|ask human>
+Why this action: <one or two sentences>
+Alternatives not selected: <brief bullets or "none">
+Safety notes: <dirty tree, missing config, policy blockers, or "none">
+Next command: <suggested Flock command, or "none">
 Would mutate: no
 Stop reason: dry-run plan completed
-Next recommended human action: <command or decision>
 ```
 
 Do not claim validation, review, tracker changes, or completion in dry-run mode.

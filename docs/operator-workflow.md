@@ -100,7 +100,7 @@ The operator must not:
 
 - call merge commands except under an explicit conditional Merge approval policy (see Merge step below)
 - bypass validation or review requirements
-- close tracker items unless the underlying issue workflow reports successful implementation, observed validation, applicable PR preparation, and non-blocking review
+- close tracker items unless the underlying issue workflow reports successful implementation, observed validation, applicable PR preparation, and non-blocking review — and, when project config defers closure to post-merge, the merge is verified on the default branch
 - continue after an underlying workflow reports blocked or failed work
 - mutate unconfigured repositories
 
@@ -178,7 +178,7 @@ Limits:
 
 When the project config allows conditional merge, the operator merges after a delegated issue cycle completes with an open PR:
 
-1. Poll the PR until it is green or `Max PR wait` elapses.
+1. Poll the PR until it is green or `Max PR wait` elapses, using the verified check-wait command recorded in project config (a `gh pr view ... --json state,mergeable,reviewDecision,statusCheckRollup --jq` classifier returning `green`, `pending`, `failing`, `conflict`, `blocking-review`, or `unexpected-state`).
 2. Green means, all observed from `gh` output: every `statusCheckRollup` entry successful (none pending or failing), `mergeable: MERGEABLE` (no conflicts), Flock review verdict non-blocking, and `reviewDecision: APPROVED` when required by branch protection (not required otherwise).
 3. When green, squash-merge, verify the merge succeeded, and sync the default branch.
 4. Close the issue with completion evidence only after the merge is verified; unmerged PRs leave the issue open.

@@ -413,22 +413,40 @@ test("operator herdr post-merge cleanup removes run-created worktrees and itemiz
 	assert.match(operatorRunSkill, /Never remove a pre-existing or previous-run worktree/);
 	assert.match(operatorRunSkill, /A removal failure is non-fatal/);
 
+	// Removal is handoff-aware: the never-committed handoff file is deleted and
+	// the worktree confirmed otherwise clean before removal; never --force past
+	// unexpected state. Deletion must be documented before the removal command.
+	assert.match(operatorRunSkill, /rm <worktree-root>\/\.flock\/handoff-issue-<n>\.md/);
+	assert.match(operatorRunSkill, /git -C <worktree-root> status --short/);
+	assert.match(operatorRunSkill, /do not remove and do not use `--force`/);
+	assert.ok(
+		operatorRunSkill.indexOf("rm <worktree-root>/.flock/handoff-issue-<n>.md") <
+			operatorRunSkill.indexOf("herdr worktree remove --workspace <workspace-id>"),
+		"handoff deletion must precede the removal command",
+	);
+
 	// Failed/blocked/timeout workers stay in place and are itemized in the final run log.
 	assert.match(operatorRunSkill, /never remove a failed, blocked, timed-out, or stalled worker's pane or worktree/);
 	assert.match(operatorRunSkill, /left in place for human inspection/);
 	assert.match(operatorRunSkill, /agent name, workspace ID, worktree path, stop reason/);
 	assert.match(operatorRunSkill, /Follow-up items:/);
+
+	// Merge-stopped cycles are itemized too, and previous-run stale worktrees are
+	// discovered (report-only) rather than silently absent from the log.
+	assert.match(operatorRunSkill, /merge-stopped cycles whose worktrees and panes were intentionally preserved/);
 	assert.match(operatorRunSkill, /previous runs are report-only follow-up items/);
+	assert.match(operatorRunSkill, /herdr worktree list/);
 
 	// Stale cleanup wording is gone from both documents.
 	assert.doesNotMatch(operatorRunSkill, /worktree cleanup is out of scope for the operator/);
 	assert.doesNotMatch(operatorRunSkill, /worktree cleanup is a separate post-merge concern/);
 	assert.doesNotMatch(projectConfig, /Worktree cleanup after merge is handled separately/);
 
-	// Project config documents post-merge cleanup and report-only stale worktrees.
+	// Project config documents handoff-aware post-merge cleanup and report-only stale worktrees.
 	assert.match(projectConfig, /Post-merge cleanup: after a verified merge and issue close/);
 	assert.match(projectConfig, /herdr worktree remove --workspace/);
-	assert.match(projectConfig, /report-only, never auto-removed/);
+	assert.match(projectConfig, /never `--force` past unexpected state/);
+	assert.match(projectConfig, /report-only \(enumerated via `herdr worktree list`\), never auto-removed/);
 });
 
 test("operator dry-run plan workflow is exposed and read-only", async () => {

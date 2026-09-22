@@ -190,7 +190,7 @@ herdr worktree create --cwd "$(git rev-parse --show-toplevel)" --branch flock/is
 Worker agent: kind `pi`, name `issue-<number>`, started with `herdr agent start` in the worktree pane returned by the create command.
 Per-issue worker timeout: 45m (bounded further by remaining Max runtime).
 Handoff file: `<worktree-root>/.flock/handoff-issue-<number>.md`, written by the nested worker, read by the supervisor, never committed.
-Post-merge cleanup: after a verified merge and issue close, the operator removes the run-created worktree and workspace with `herdr worktree remove --workspace <workspace-id>` (see the `operator-run` skill, section 6), scoped strictly to resources created in the current run via the creation-time recorded IDs. Failed, blocked, or timed-out workers keep their pane and worktree for human inspection and are itemized in the final run log; stale worktrees from previous runs are report-only, never auto-removed.
+Post-merge cleanup: after a verified merge and issue close, the operator removes the run-created worktree and workspace (see the `operator-run` skill, section 6): delete the never-committed handoff file, confirm the worktree is otherwise clean (never `--force` past unexpected state), then `herdr worktree remove --workspace <workspace-id>`, scoped strictly to resources created in the current run via the creation-time recorded IDs. Failed, blocked, timed-out, or merge-stopped workers keep their pane and worktree for human inspection and are itemized in the final run log; stale worktrees from previous runs are report-only (enumerated via `herdr worktree list`), never auto-removed.
 
 ## Retry
 

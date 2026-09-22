@@ -154,6 +154,18 @@ test("prompt templates preserve Flock routing contracts", () => {
 	assert.match(expanded, /please check this change/);
 });
 
+test("work queue instructions require accepted issues to dispatch immediately", async () => {
+	const workPrompt = await readFile(join(repoRoot, ".pi", "prompts", "work.md"), "utf8");
+	const issueLoopSkill = await readFile(join(repoRoot, ".pi", "skills", "issue-loop", "SKILL.md"), "utf8");
+
+	assert.match(workPrompt, /show the issue and branch strategy/);
+	assert.match(workPrompt, /after acceptance, immediately work one issue in the same run/);
+	assert.match(issueLoopSkill, /Branch strategy:/);
+	assert.match(issueLoopSkill, /Next action if accepted: immediately dispatch/);
+	assert.match(issueLoopSkill, /If the user declines, stop without creating a branch, commit, issue update, PR, or other mutating change\./);
+	assert.match(issueLoopSkill, /Do not ask the user to run a second command before dispatching\./);
+});
+
 test("skills load from .pi/skills with required descriptions", () => {
 	const { skills, diagnostics } = loadSkillsFromDir({
 		dir: join(repoRoot, ".pi", "skills"),

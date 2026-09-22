@@ -13,6 +13,6 @@ Default behavior:
 
 - label: `ready-for-agent`
 - limit: `1`
-- attended mode: confirm before starting each issue unless `--yes` is present
-- work one issue at a time through the `github-issue-worker` workflow
+- attended mode: show the issue and branch strategy, then confirm before starting each issue unless `--yes` is present
+- after acceptance, immediately work one issue in the same run through the `github-issue-worker` workflow
 - stop on ambiguity, failed verification, dirty tree, or any safety concern

@@ -270,6 +270,11 @@ test("operator run workflow is exposed and bounded", async () => {
 	assert.match(operatorRunSkill, /statusCheckRollup/);
 	assert.match(operatorRunSkill, /MERGEABLE/);
 	assert.match(operatorRunSkill, /PR not green/);
+	assert.match(operatorRunSkill, /merge failed/);
+	assert.match(operatorRunSkill, /merge verification failed/);
+	assert.match(operatorRunSkill, /gh pr merge <number> --squash/);
+	assert.match(operatorRunSkill, /verified check-wait command/);
+	assert.match(operatorRunSkill, /CHANGES_REQUESTED/);
 	assert.match(operatorRunSkill, /the operator performs `gh issue close[^`]*` only after the merge is verified/);
 	assert.match(operatorRunSkill, /Do not claim validation, review, tracker changes, or tracker completion unless command output/);
 });
@@ -342,8 +347,11 @@ test("project config documents operator approval policy", async () => {
 	assert.match(projectConfig, /All other PRs remain human-merged/);
 	assert.match(projectConfig, /statusCheckRollup/);
 	assert.match(projectConfig, /mergeable: MERGEABLE/);
+	assert.match(projectConfig, /reviewDecision: APPROVED/);
+	assert.match(projectConfig, /review verdict non-blocking/);
 	assert.match(projectConfig, /Max PR wait per issue: 15m/);
 	assert.match(projectConfig, /squash/);
+	assert.match(projectConfig, /Check-wait command \(verified/);
 	assert.match(projectConfig, /Issue closure happens after merge/);
 	assert.match(operatorWorkflow, /Example: conservative repository policy/);
 	assert.match(operatorWorkflow, /Example: trusted\/high-automation repository policy/);

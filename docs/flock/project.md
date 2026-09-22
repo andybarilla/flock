@@ -143,7 +143,31 @@ Notes:
 - Merge method: squash. Flock never deletes branches; the GitHub auto-delete-on-merge setting handles branch cleanup.
 - The operator polls for green up to `Max PR wait` and stops cleanly with reason "PR not green" on timeout, leaving a resumable handoff. It never waits indefinitely.
 - Merge without this policy section, or of any PR failing a green criterion, is refused.
-- Dispatcher merge behavior additionally requires a verified check-wait command (tracked in #29) before it ships; this section is the policy decision that unblocks it.
+- Check-wait command (verified 2026-09-22 against real PR output from flock#33 and dollandrobot/bandependent#433, plus fixture classification of every state):
+
+```bash
+gh pr view <number> --json state,mergeable,reviewDecision,statusCheckRollup --jq '
+  def checks:
+    [.statusCheckRollup[] |
+      if .__typename == "CheckRun" then
+        {pending: (.status != "COMPLETED"),
+         failing: (.status == "COMPLETED" and (.conclusion | IN("FAILURE","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE")))}
+      else
+        {pending: (.state == "PENDING" or .state == "EXPECTED"),
+         failing: (.state == "FAILURE" or .state == "ERROR")}
+      end];
+  . as $pr | checks as $c |
+  if $pr.state != "OPEN" then "unexpected-state:" + $pr.state
+  elif ($c | map(select(.failing)) | length) > 0 then "failing"
+  elif $pr.reviewDecision == "CHANGES_REQUESTED" then "blocking-review"
+  elif $pr.mergeable == "CONFLICTING" then "conflict"
+  elif ($c | map(select(.pending)) | length) > 0
+       or $pr.mergeable == "UNKNOWN"
+       or $pr.reviewDecision == "REVIEW_REQUIRED" then "pending"
+  else "green" end'
+```
+
+- `SKIPPED` and `NEUTRAL` check conclusions count as satisfied, matching GitHub branch protection semantics. An empty `statusCheckRollup` (no CI configured) is vacuously green on checks; `mergeable`, review verdict, and `reviewDecision` still apply.
 - Issue closure moves to post-merge (see Tracker completion policy above).
 
 ## Retry

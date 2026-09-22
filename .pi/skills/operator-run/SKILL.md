@@ -141,7 +141,52 @@ Arguments: --limit <configured batch size> --yes
 
 The delegated workflow owns its normal safety checks, validation, review, PR handling, and tracker evidence reporting. Tracker completion ownership is split: when project config defers issue closure to post-merge, the delegated workflow leaves the issue open with completion evidence, and the operator performs `gh issue close <number> --reason completed` only after the merge is verified on the default branch. If the delegated workflow reports blocked or failed status, the operator must stop and report that result. Merge only under the conditional Merge policy rules above; never merge any other PR.
 
-## 6. Loop continuation gate
+## 6. Merge step after a completed issue cycle
+
+Run this step when a delegated issue workflow completed with a PR opened in the current run. Skip it for triage, grooming, and review cycles.
+
+Preconditions — all must hold before any merge command:
+
+1. the PR number was observed from the delegated workflow's output in this run; never merge a PR the operator did not open this run
+2. project config contains a conditional `Merge` approval policy that allows merge
+3. project config records a verified check-wait command; without it, report the PR state and stop for a human merge
+4. the delegated workflow reported non-blocking review; a blocking verdict stops the run
+
+### Check-wait command
+
+Use the verified check-wait command recorded in project config:
+
+```bash
+gh pr view <number> --json state,mergeable,reviewDecision,statusCheckRollup --jq '<green classifier recorded in project config>'
+```
+
+Classification results:
+
+- `green`: every check satisfied (`SUCCESS`, `SKIPPED`, or `NEUTRAL`), no check pending, `mergeable: MERGEABLE`, and `reviewDecision` is `APPROVED` or empty (branch protection does not require review)
+- `pending`: any check in progress/queued/expected, `mergeable: UNKNOWN`, or `reviewDecision: REVIEW_REQUIRED`
+- `failing`: any check `FAILURE`, `CANCELLED`, `TIMED_OUT`, `ACTION_REQUIRED`, or `STARTUP_FAILURE`, or a status context in `ERROR`
+- `conflict`: `mergeable: CONFLICTING`
+- `blocking-review`: `reviewDecision: CHANGES_REQUESTED`
+- `unexpected-state:<state>`: the PR is not `OPEN`
+
+### Poll, then merge or stop
+
+Poll the check-wait command every 60 seconds until the result is not `pending`, or the configured max PR wait elapses (default 15m).
+
+- On `green`: squash-merge with `gh pr merge <number> --squash` and observe the output. Then verify: `gh pr view <number> --json state` reports `MERGED`. If the merge command fails, stop with `merge failed`. If the PR is not observed `MERGED` afterward, stop with `merge verification failed`. Never claim a merge that was not observed.
+- On `failing`, `conflict`, `blocking-review`, or `unexpected-state`: stop with the matching reason before any merge command.
+- On timeout while still `pending`: stop with `PR not green`. Leave the PR and issue open and the issue branch in place, and give a resumable handoff: the next recommended human action is to re-run the operator or merge manually once checks are green.
+
+### Post-merge close and sync
+
+After a verified merge:
+
+1. sync the default branch: `git checkout main && git pull --ff-only` (or the configured default branch), and confirm the squash merge commit appears in `git log --oneline origin/<default> -5`
+2. post the completion-evidence comment (issue number, branch, PR link, validation result, review verdict, merge commit) and close the issue: `gh issue close <number> --reason completed`
+
+If the sync fails or the merge commit is absent, stop with `merge verification failed` and report the merged PR with the divergence. Claim tracker completion in the run log only from the observed close command output.
+
+## 7. Loop continuation gate
 
 When `--loop` is set, repeat the one-cycle process only while all conditions remain safe:
 
@@ -163,7 +208,7 @@ Stop instead of continuing when any of these occur: queue is empty, work is bloc
 
 Do not continue after a failed or blocked issue in v1 unless project policy explicitly supports retries and the retry conditions are met. The default Flock retry policy is no retry.
 
-## 7. Final run log
+## 8. Final run log
 
 Return a stage-by-stage summary for one-shot mode, and a Final run log for loop mode. Mark each stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Do not claim validation, review, tracker changes, or tracker completion unless command output from the underlying workflow was observed.
 
@@ -179,10 +224,11 @@ Branch: <branch name when available, or "not created">
 PR: <PR link when available, or "not opened">
 Validation: <observed result from delegated workflow, or "not run">
 Review verdict: <observed verdict from delegated workflow, or "not run">
-Tracker completion: <observed completion result from delegated workflow, or "not run">
+Merge verdict: <merged and verified|PR not green|failing|conflict|blocking review|merge failed|merge verification failed|not run>
+Tracker completion: <observed completion result from delegated workflow or post-merge close, or "not run">
 Tracker changes: <labels/comments/issues closed or "none observed">
 Cycle log:
-- Cycle <n>: action=<work|triage|groom|review|stop>; issue=<#number|none>; PR=<url|none>; validation=<observed|not run>; review=<verdict|not run>; tracker=<changes|none>; result=<succeeded|blocked|failed|stopped>
+- Cycle <n>: action=<work|triage|groom|review|stop>; issue=<#number|none>; PR=<url|none>; validation=<observed|not run>; review=<verdict|not run>; merge=<merged|not green|failed|not run>; tracker=<changes|none>; result=<succeeded|blocked|failed|stopped>
 Workflow summary:
 - Preflight: <succeeded|skipped|failed> — <observed result or stop reason>
 - Project policy gate: <succeeded|skipped|failed> — <observed result or stop reason>
@@ -191,6 +237,7 @@ Workflow summary:
 - Loop continuation gate: <succeeded|skipped|failed> — <observed safe state or stop reason>
 - Validation: <succeeded|skipped|failed> — <observed delegated result or not run>
 - Review: <succeeded|skipped|failed> — <observed delegated result or not run>
+- Merge step: <succeeded|skipped|failed> — <observed merge/verification result, stop reason, or not run>
 - Tracker completion: <succeeded|skipped|failed> — <observed delegated result or not run>
 Stop reason: <completed one-shot action|dry-run plan completed|queue empty|blocked|failed|review blocking|review cannot run|PR not green|merge failed|merge verification failed|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
 Next recommended human action: <merge/review/fix/configure/run suggested command/no action>

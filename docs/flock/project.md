@@ -43,6 +43,7 @@ Existing useful labels:
 - `enhancement`
 - `question`
 - `wontfix`
+- `blocked`
 
 Flock state labels:
 
@@ -50,6 +51,7 @@ Flock state labels:
 - needs-triage: `needs-triage`
 - needs-info: `needs-info`
 - ready-for-human: `ready-for-human`
+- blocked: `blocked`
 - wontfix: `wontfix`
 
 Size labels:
@@ -120,7 +122,7 @@ Advanced review available: yes
 Escalate to advanced review when:
 - `.pi/extensions/**` changes, because extension code can execute commands and mutate files
 - package installation/loading behavior changes
-- workflow logic for `/work`, `/issue`, `/groom`, `/project-config`, or `/flock-status` changes
+- workflow logic for `/work`, `/issue`, `/groom`, `/triage`, `/project-config`, or `/flock-status` changes
 - GitHub label, branch, merge, or retry policy changes
 - generated package metadata changes
 - tests/gates are absent or weak for a non-documentation change
@@ -155,6 +157,7 @@ Mutating operator automation is allowed only when this config is present and the
 Approval categories:
 - Issue selection for queued work: auto-approve for issues labeled `ready-for-agent` after the issue-loop dispatchability summary succeeds.
 - Grooming labels/comments: auto-approve within the grooming batch limit when the groomer has no blocking product or technical questions.
+- Triage labels/comments: auto-approve within the triage issue limit when product-manager and tech-lead checks identify a clear next state.
 - Branch creation: auto-approve for issue branches matching `flock/issue-<number>-<short-slug>` from `main`.
 - Commits: auto-approve scoped commits on the issue branch after validation has been run.
 - PR creation/update: auto-approve PR creation or updates using neutral `Refs #<number>` references.
@@ -165,6 +168,7 @@ Limits:
 - Max cycles per operator run: 5
 - Max issues worked per operator run: 3
 - Max grooming batches per operator run: 1
+- Max triage issues per operator run: 5
 - Max runtime: ask when launching the operator
 
 Stop conditions:

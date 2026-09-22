@@ -1,6 +1,6 @@
 # Bounded Flock operator workflow
 
-This document specifies the planned Flock operator: an extension-backed workflow for trusted repositories where issues are already well shaped and the maintainer wants Flock to coordinate routine `status -> groom -> work -> repeat` cycles with bounded approvals.
+This document specifies the planned Flock operator: an extension-backed workflow for trusted repositories where issues are already well shaped and the maintainer wants Flock to coordinate routine `status -> groom -> triage -> work -> repeat` cycles with bounded approvals.
 
 The operator is not a fully autonomous software development agent. It is an orchestrator that launches existing Flock workflows, enforces repository policy, records what happened, and stops whenever human judgment is required.
 
@@ -48,6 +48,7 @@ Expected output:
 - worktree and branch safety
 - ready queue status
 - grooming need, if observable
+- triage need, if observable
 - open PR or review bottlenecks
 - recommended next action: groom, work, review, stop, or ask human
 - whether mutating automation is blocked by missing or insufficient policy
@@ -66,6 +67,7 @@ Requirements:
 Examples of one-shot actions:
 
 - run bounded grooming when grooming is allowed and no blocking questions exist
+- run bounded triage when triage is allowed and a `needs-triage` issue can be moved to a clear next state
 - dispatch one ready issue through the existing issue loop with routine issue-selection approval
 - route to PR review when review is the safest next action
 
@@ -78,6 +80,7 @@ Required limits:
 - maximum cycles
 - maximum issues worked
 - maximum grooming changes or grooming batches
+- maximum triage issues changed
 
 Recommended limits:
 
@@ -95,6 +98,7 @@ Allowed command families:
 
 - status and routing checks equivalent to `/flock-status`
 - bounded grooming through the `groom` workflow
+- bounded triage through the `triage` workflow
 - queued issue work through the `issue-loop` and `github-issue-worker` workflows
 - PR or diff review through existing review workflows
 - project config checks when needed
@@ -117,6 +121,7 @@ The policy should distinguish at least these categories:
 | --- | --- | --- |
 | Issue selection for queued work | ask/blocked | May be auto-approved for trusted repos. |
 | Grooming labels/comments | ask/blocked | May be auto-approved only when the groomer has no blocking questions and remains within limits. |
+| Triage labels/comments | ask/blocked | May be auto-approved only when product-manager and tech-lead checks identify a clear next state within limits. |
 | Branch creation | ask/blocked | Usually allowed when issue work is allowed. |
 | Commits | ask/blocked | Usually allowed for issue work within the branch policy. |
 | PR creation/update | ask/blocked | Allowed only when PR policy permits. |
@@ -135,6 +140,7 @@ Mutating operator automation requires explicit approval policy here. When this s
 Approval categories:
 - Issue selection for queued work: ask
 - Grooming labels/comments: ask
+- Triage labels/comments: ask
 - Branch creation: ask
 - Commits: ask
 - PR creation/update: ask
@@ -145,6 +151,7 @@ Limits:
 - Max cycles per operator run: 1
 - Max issues worked per operator run: 1
 - Max grooming batches per operator run: 0
+- Max triage issues per operator run: 0
 - Max runtime: ask
 ```
 
@@ -158,6 +165,7 @@ Mutating operator automation is allowed only when this config is present and the
 Approval categories:
 - Issue selection for queued work: auto-approve for issues labeled `ready-for-agent` after the issue-loop dispatchability summary succeeds.
 - Grooming labels/comments: auto-approve within the grooming batch limit when the groomer has no blocking product or technical questions.
+- Triage labels/comments: auto-approve within the triage issue limit when product-manager and tech-lead checks identify a clear next state.
 - Branch creation: auto-approve for configured issue branches from the configured base branch.
 - Commits: auto-approve scoped commits on the issue branch after validation has been run.
 - PR creation/update: auto-approve PR creation or updates using neutral `Refs #<number>` references.
@@ -168,6 +176,7 @@ Limits:
 - Max cycles per operator run: 5
 - Max issues worked per operator run: 3
 - Max grooming batches per operator run: 1
+- Max triage issues per operator run: 5
 - Max runtime: ask when launching the operator
 ```
 
@@ -182,7 +191,7 @@ The operator must stop and report the reason when any of these occur:
 - GitHub or tracker authentication fails
 - required labels, commands, or validation gates are unavailable
 - no safe next action exists
-- grooming finds a blocking product or technical question
+- grooming or triage finds a blocking product or technical question
 - selected issue is ambiguous, too broad, already complete, or not dispatchable
 - implementation fails or blocks
 - validation fails or cannot be observed
@@ -190,7 +199,7 @@ The operator must stop and report the reason when any of these occur:
 - required review cannot run
 - review verdict is blocking
 - tracker completion fails when required
-- configured cycle, issue, grooming, runtime, or retry limits are reached
+- configured cycle, issue, grooming, triage, runtime, or retry limits are reached
 - an underlying Flock workflow reports blocked/failed status
 
 ## Run log and handoff

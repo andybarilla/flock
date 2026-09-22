@@ -13,6 +13,7 @@ Prompt templates:
 - `/issue` — work a specific GitHub issue
 - `/work` — work ready-for-agent GitHub issues one at a time
 - `/groom` — classify GitHub issues toward a ready-for-agent queue target
+- `/triage` — resolve `needs-triage` issues into ready, blocked, human, info, or explicit decision states
 - `/project-config` — create or check repo-specific Flock configuration
 - `/manager` — assess repo/team status, queue health, blockers, and next action
 - `/product` — shape product goals into requirements, priorities, and agent-ready issue briefs
@@ -30,6 +31,7 @@ Skills:
 - `pr-review` — review one GitHub pull request
 - `issue-loop` — work ready-for-agent issues one at a time
 - `groom` — classify GitHub issues and stock the ready queue
+- `triage` — move `needs-triage` issues to the most accurate state, including `blocked`, when decisions are resolved
 - `project-config` — create or check `docs/flock/project.md`
 - `engineering-manager` — assess status, queue health, blockers, and next action
 - `product-manager` — shape product goals into requirements, priorities, and agent-ready issue briefs
@@ -66,6 +68,7 @@ Start every new repository session with the read-only status command:
 | `/lead` | Work needs technical decomposition, sequencing, risk assessment, or workflow routing. | No by default |
 | `/scout-and-plan` | An unclear area needs deeper repository reconnaissance and an implementation plan. | No |
 | `/groom` | The ready queue is low and GitHub issues need classification into `ready-for-agent`, `needs-info`, or related states. | Yes, may update issue labels/comments |
+| `/triage` | Issues labelled `needs-triage` need product-manager and tech-lead checks to determine their next state. | Yes, may update issue labels/comments |
 | `/work` | The `ready-for-agent` queue is stocked and you want Flock to work issues one at a time, with post-implementation review when a PR/diff exists. | Yes, creates branches/commits/PRs |
 | `/issue <number>` | You want one specific GitHub issue implemented and then reviewed when a PR/diff exists. | Yes, creates a branch and may commit/open a PR |
 | `/pr-review <number>` | An open pull request needs review. | No by default |

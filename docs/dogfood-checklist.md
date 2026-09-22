@@ -7,7 +7,7 @@ Use this checklist to validate that Flock is dogfood-ready from a clean external
 - A clean clone or checkout of this repository, referred to below as `<flock-repo>`.
 - A separate clean target repository where it is safe to run read-only Flock commands, referred to below as `<target-repo>`.
 - `pi`, `git`, `gh`, and `npm` available on `PATH`.
-- GitHub CLI authenticated if you intend to exercise GitHub-backed flows such as `/flock-status`, `/groom`, `/work`, or `/issue`.
+- GitHub CLI authenticated if you intend to exercise GitHub-backed flows such as `/flock-status`, `/groom`, `/triage`, `/work`, or `/issue`.
 
 ## Manual validation
 
@@ -42,6 +42,7 @@ In the pi session, confirm the following prompt templates are available by invok
 - `/product`
 - `/lead`
 - `/groom`
+- `/triage`
 - `/work`
 - `/issue`
 - `/pr-review`

@@ -18,6 +18,7 @@ State labels:
 - needs-triage: `<label>`
 - needs-info: `<label>`
 - ready-for-human: `<label>`
+- blocked: `<label>`
 - wontfix: `<label>`
 
 Size labels:
@@ -109,6 +110,7 @@ Mutating operator automation requires explicit approval policy here. When this s
 Approval categories:
 - Issue selection for queued work: ask
 - Grooming labels/comments: ask
+- Triage labels/comments: ask
 - Branch creation: ask
 - Commits: ask
 - PR creation/update: ask
@@ -119,6 +121,7 @@ Limits:
 - Max cycles per operator run: 1
 - Max issues worked per operator run: 1
 - Max grooming batches per operator run: 0
+- Max triage issues per operator run: 0
 - Max runtime: ask
 
 Stop conditions:

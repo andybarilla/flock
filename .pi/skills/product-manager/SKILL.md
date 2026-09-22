@@ -115,7 +115,8 @@ Prefer ready, high-confidence work when stocking the agent queue. Prefer clarifi
 Name the next workflow explicitly:
 
 - `/lead ...` — technical sequencing or architecture decision needed
-- `/groom ...` — backlog needs classification into ready work
+- `/groom ...` — no-state backlog needs classification into ready work
+- `/triage ...` — `needs-triage` issues need product and technical checks to resolve their next state
 - `/project-config ...` — repo lacks workflow policy
 - `/issue <n>` — one issue is ready to implement
 - `/work ...` — ready queue is stocked and user wants execution

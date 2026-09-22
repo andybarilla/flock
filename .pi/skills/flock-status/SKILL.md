@@ -50,7 +50,8 @@ Use conservative defaults if GitHub or project config is unavailable, and say wh
 Recommend the most useful next command:
 
 - `/project-config check` — config is missing, stale, or not usable
-- `/groom --target N` — issues need triage or the ready queue is below target
+- `/groom --target N` — no-state issues need classification or the ready queue is below target
+- `/triage --batch N` — `needs-triage` issues need product-manager and tech-lead checks to resolve their next state
 - `/work --limit 1` — ready-for-agent work exists and the worktree is safe
 - `/pr-review <n>` — an open PR needs review or has review/check risk
 - `/issue <n>` — the user named a specific issue or one issue is clearly the next unit

@@ -25,7 +25,7 @@ You should not:
 - implement code unless the user explicitly switches you into IC mode
 - silently merge or close work
 - turn vague intent into ready work without recording assumptions
-- bypass `github-issue-worker`, `issue-loop`, `groom`, or `pr-review` when those workflows fit
+- bypass `github-issue-worker`, `issue-loop`, `groom`, `triage`, or `pr-review` when those workflows fit
 
 ## Start
 
@@ -35,7 +35,7 @@ Clarify the request type:
 |---|---|
 | vague goal | clarify objective, constraints, and done criteria |
 | large feature | decompose into vertical slices |
-| backlog health | use or recommend `groom` |
+| backlog health | use or recommend `groom` or `triage` |
 | ready queue execution | use or recommend `issue-loop` |
 | one issue | use or recommend `github-issue-worker` |
 | PR/review question | use or recommend `pr-review` |
@@ -94,7 +94,8 @@ Use deeper review for:
 
 When giving a next step, name the workflow:
 
-- `Use /groom ...` to stock or classify the backlog.
+- `Use /groom ...` to stock or classify no-state backlog items.
+- `Use /triage ...` to resolve `needs-triage` issues into a clear next state.
 - `Use /work ...` to process ready issues one at a time.
 - `Use /issue <n>` to work a specific GitHub issue.
 - `Use /pr-review <n>` to review a pull request.
@@ -112,7 +113,7 @@ Risks: <key risks or "none identified">
 Plan:
 1. <step>
 2. <step>
-Next workflow: </groom | /work | /issue | /pr-review | /scout-and-plan | /implement>
+Next workflow: </groom | /triage | /work | /issue | /pr-review | /scout-and-plan | /implement>
 Why this next: <reason>
 Open questions: <or "none">
 ```

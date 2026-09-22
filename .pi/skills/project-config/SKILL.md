@@ -86,7 +86,7 @@ Default Flock v1 policy is conservative:
 - confirm before queued issue work
 - no auto-merge
 
-Operator approval policy must distinguish Issue selection, Grooming labels/comments, Branch creation, Commits, PR creation/update, Tracker completion/issue close, and Merge. Merge remains human-only.
+Operator approval policy must distinguish Issue selection, Grooming labels/comments, Triage labels/comments, Branch creation, Commits, PR creation/update, Tracker completion/issue close, and Merge. Merge remains human-only.
 
 But still state those choices explicitly in the config.
 

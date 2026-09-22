@@ -28,6 +28,7 @@ const expectedPromptNames = [
 	"pr-review",
 	"review",
 	"scout-and-plan",
+	"triage",
 	"work",
 ];
 
@@ -43,6 +44,7 @@ const expectedPromptSkillRoutes = new Map([
 	["lead", "tech-lead"],
 	["product", "product-manager"],
 	["project-config", "project-config"],
+	["triage", "triage"],
 ]);
 
 const expectedSkillNames = [
@@ -57,6 +59,7 @@ const expectedSkillNames = [
 	"product-manager",
 	"project-config",
 	"tech-lead",
+	"triage",
 ];
 
 const expectedAgentNames = [
@@ -244,6 +247,7 @@ test("project config documents operator approval policy", async () => {
 		assert.match(content, /Operator Approval Policy/);
 		assert.match(content, /Issue selection/);
 		assert.match(content, /Grooming labels\/comments/);
+		assert.match(content, /Triage labels\/comments/);
 		assert.match(content, /Branch creation/);
 		assert.match(content, /Commits/);
 		assert.match(content, /PR creation\/update/);

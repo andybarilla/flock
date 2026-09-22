@@ -17,7 +17,7 @@ Before applying defaults, check for `docs/flock/project.md`. If present, read it
 
 - Target ready-for-agent depth: `6`
 - Batch size: `10`
-- State labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`
+- State labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `blocked`, `wontfix`
 - Epic label: `epic`
 
 Parse user arguments for:
@@ -55,6 +55,7 @@ Count:
 - `needs-triage`
 - `needs-info`
 - `ready-for-human`
+- `blocked`
 - `wontfix`
 - no state label
 - no-state epics
@@ -97,6 +98,7 @@ If dispatchable ready is below target and there are no no-state issues, report w
 
 - `needs-triage` issues need a decision or decomposition
 - `needs-info` issues need a person to answer
+- `blocked` issues need a dependency, external action, or prerequisite resolved
 - stale-ready issues need correction, decomposition, or closure
 - if none of those exist, the backlog lacks agent-ready work
 
@@ -179,6 +181,12 @@ Use when the work is specified but requires a human action, credential, product 
 
 Say what human action is needed.
 
+### `blocked`
+
+Use when product and technical scope are clear, but the issue cannot be worked until a named dependency, external action, or prerequisite is resolved.
+
+Name the blocker in a comment, then label it.
+
 ### `wontfix`
 
 Use only when the issue is clearly ruled out by explicit project policy or user instruction. Otherwise prefer `needs-triage`.
@@ -204,6 +212,7 @@ Before:
 - ready-for-agent: <raw count>
 - dispatchable ready: <audited count>
 - stale ready: <count>
+- blocked: <count>
 - no state: <count>
 
 Changed:

@@ -17,7 +17,7 @@ You may:
 - inspect GitHub issue and PR queues
 - summarize status
 - identify blockers, stale work, and WIP risks
-- recommend grooming, issue work, review, planning, or human action
+- recommend grooming, triage, issue work, review, planning, or human action
 - produce concise manager reports
 
 You should not:
@@ -74,6 +74,7 @@ Use labels from project config when available, otherwise defaults:
 - `needs-triage`
 - `needs-info`
 - `ready-for-human`
+- `blocked`
 - `wontfix`
 
 Command shape:
@@ -89,6 +90,7 @@ Report:
 - needs-triage count
 - needs-info count
 - ready-for-human count
+- blocked count
 - likely stale-ready risk, if visible
 
 Do not audit every issue unless asked. For normal status, sample enough to identify the next action.
@@ -125,9 +127,11 @@ General priority:
 1. unblock failing/stale PRs
 2. review PRs waiting on humans/agents
 3. handle `needs-info` if the user can answer
-4. groom if ready queue is below target
-5. run `/work` when queue is stocked and worktree is safe
-6. plan/decompose ambiguous work with `/lead`
+4. groom no-state issues if ready queue is below target
+5. triage `needs-triage` issues when no-state grooming cannot stock the queue
+6. unblock `blocked` issues when their dependency or prerequisite is resolved
+7. run `/work` when queue is stocked and worktree is safe
+8. plan/decompose ambiguous work with `/lead`
 
 Do not recommend `/work --yes --limit N` unless the config exists and the user explicitly wants unattended work.
 
@@ -137,6 +141,7 @@ Name the next workflow explicitly:
 
 - `/project-config check` — config missing or stale
 - `/groom --target N` — ready queue below target and no-state issues exist
+- `/triage --batch N` — `needs-triage` issues may be resolvable into ready, human, info, or explicit decision states
 - `/work --limit 1` — ready queue has dispatchable work and worktree is safe
 - `/pr-review <n>` — PR needs review
 - `/issue <n>` — user wants a specific issue worked
@@ -156,6 +161,7 @@ Issues:
 - ready-for-agent: <count>
 - needs-triage: <count>
 - needs-info: <count>
+- blocked: <count>
 - no-state: <count>
 PRs:
 - open: <count>

@@ -185,7 +185,7 @@ test("issue workflow instructions require automatic separate review when a targe
 	assert.match(issueWorkerSkill, /If a PR was opened or updated, review that PR with the `pr-review` workflow/);
 	assert.match(issueWorkerSkill, /if there is a reviewable local diff against the base branch, review that diff with the `ic-review` workflow/);
 	assert.match(issueWorkerSkill, /If there is no PR and no reviewable diff, stop and explain clearly/);
-	assert.match(issueWorkerSkill, /Do not auto-merge\. Human merge remains manual/);
+	assert.match(issueWorkerSkill, /The worker never merges; merge is handled post-handoff per project config/);
 	assert.match(issueWorkerSkill, /Closure deferral to post-merge/);
 	assert.match(issueWorkerSkill, /deferred — closure after merge per project config/);
 	assert.match(issueWorkerSkill, /Review: <review target and verdict, or clear reason review did not run>/);

@@ -214,7 +214,7 @@ Keep implementation and review roles separate:
 - Do not review your own implementation inline as a substitute for `pr-review` or `ic-review`.
 - When the `subagent` tool is available, prefer delegating local-diff review to the project `ic-review` agent.
 - Do not run an automatic fix pass from this workflow; report review findings and verdict only.
-- Do not auto-merge. Human merge remains manual.
+- Do not auto-merge. The worker never merges; merge is handled post-handoff per project config (by the operator under its Merge policy, or by a human).
 
 The review output must include findings and a merge/readiness verdict, using the review workflow's verdict format.
 

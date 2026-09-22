@@ -352,6 +352,8 @@ test("project config documents operator approval policy", async () => {
 	assert.match(projectConfig, /Max PR wait per issue: 15m/);
 	assert.match(projectConfig, /squash/);
 	assert.match(projectConfig, /Check-wait command \(verified/);
+	assert.match(projectConfig, /IN\("SUCCESS","SKIPPED","NEUTRAL"\)/);
+	assert.match(projectConfig, /fail-closed/);
 	assert.match(projectConfig, /Issue closure happens after merge/);
 	assert.match(operatorWorkflow, /Example: conservative repository policy/);
 	assert.match(operatorWorkflow, /Example: trusted\/high-automation repository policy/);

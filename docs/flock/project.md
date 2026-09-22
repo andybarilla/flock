@@ -143,7 +143,7 @@ Notes:
 - Merge method: squash. Flock never deletes branches; the GitHub auto-delete-on-merge setting handles branch cleanup.
 - The operator polls for green up to `Max PR wait` and stops cleanly with reason "PR not green" on timeout, leaving a resumable handoff. It never waits indefinitely.
 - Merge without this policy section, or of any PR failing a green criterion, is refused.
-- Check-wait command (verified 2026-09-22 against real PR output from flock#33 and dollandrobot/bandependent#433, plus fixture classification of every state):
+- Check-wait command (verified 2026-09-22 against real PR output from flock#33 and dollandrobot/bandependent#433, plus fixture classification of every state; the classifier is fail-closed — any unrecognized typename, conclusion, or state classifies as `failing`, never `green`):
 
 ```bash
 gh pr view <number> --json state,mergeable,reviewDecision,statusCheckRollup --jq '
@@ -151,10 +151,12 @@ gh pr view <number> --json state,mergeable,reviewDecision,statusCheckRollup --jq
     [.statusCheckRollup[] |
       if .__typename == "CheckRun" then
         {pending: (.status != "COMPLETED"),
-         failing: (.status == "COMPLETED" and (.conclusion | IN("FAILURE","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE")))}
-      else
+         failing: (.status == "COMPLETED" and ((.conclusion | IN("SUCCESS","SKIPPED","NEUTRAL")) | not))}
+      elif .__typename == "StatusContext" then
         {pending: (.state == "PENDING" or .state == "EXPECTED"),
-         failing: (.state == "FAILURE" or .state == "ERROR")}
+         failing: ((.state | IN("SUCCESS","PENDING","EXPECTED")) | not)}
+      else
+        {pending: false, failing: true}
       end];
   . as $pr | checks as $c |
   if $pr.state != "OPEN" then "unexpected-state:" + $pr.state

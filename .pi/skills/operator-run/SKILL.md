@@ -108,7 +108,7 @@ Policy category checks:
 - triage requires `Triage labels/comments` and must dispatch through the `triage` workflow with a limit of one issue unless project policy/user limits are lower
 - grooming requires `Grooming labels/comments` and must dispatch through the `groom` workflow for one bounded batch unless project policy/user limits are lower
 - PR review must dispatch through the `pr-review` workflow for one PR, or `ic-review` only when reviewing a local diff; review must not merge
-- merge requires the `Merge` policy category and is allowed only as a squash merge of a green PR opened by the operator in the current run. Green means, all observed from `gh` output: every `statusCheckRollup` entry successful (none pending or failing), `mergeable: MERGEABLE`, Flock review verdict non-blocking, and `reviewDecision: APPROVED` when required by branch protection (not required otherwise). The operator polls up to the configured max PR wait and stops with reason "PR not green" on timeout; it never waits indefinitely. Merge execution additionally requires the verified check-wait command recorded in project config; without it, the operator reports the PR green and stops for a human merge. Failing checks, merge conflicts, blocking review, missing/insufficient Merge policy, or any PR not opened by this run each stop the run before any merge command. The issue is closed completed only after the merge is verified on the default branch.
+- merge requires the `Merge` policy category and is allowed only as a squash merge of a green PR opened by the operator in the current run. Green means, all observed from `gh` output: every `statusCheckRollup` entry successful (none pending or failing), `mergeable: MERGEABLE`, Flock review verdict non-blocking, and `reviewDecision: APPROVED` when required by branch protection (not required otherwise). The operator polls up to the configured max PR wait and stops with reason "PR not green" on timeout; it never waits indefinitely. Merge execution additionally requires the verified check-wait command recorded in project config; without it, the operator reports the PR state and stops for a human merge. Failing checks, merge conflicts, blocking review, missing/insufficient Merge policy, or any PR not opened by this run each stop the run before any merge command. The issue is closed completed only after the merge is verified on the default branch.
 
 Interpret the selected approval policy category explicitly:
 
@@ -174,7 +174,7 @@ Classification results:
 Poll the check-wait command every 60 seconds until the result is not `pending`, or the configured max PR wait elapses (default 15m).
 
 - On `green`: squash-merge with `gh pr merge <number> --squash` and observe the output. Then verify: `gh pr view <number> --json state` reports `MERGED`. If the merge command fails, stop with `merge failed`. If the PR is not observed `MERGED` afterward, stop with `merge verification failed`. Never claim a merge that was not observed.
-- On `failing`, `conflict`, `blocking-review`, or `unexpected-state`: stop with the matching reason before any merge command.
+- On `failing`, `conflict`, `blocking-review`, or `unexpected-state`: stop with the matching reason (`checks failing`, `merge conflict`, `review blocking`, or `unexpected PR state`) before any merge command.
 - On timeout while still `pending`: stop with `PR not green`. Leave the PR and issue open and the issue branch in place, and give a resumable handoff: the next recommended human action is to re-run the operator or merge manually once checks are green.
 
 ### Post-merge close and sync
@@ -239,7 +239,7 @@ Workflow summary:
 - Review: <succeeded|skipped|failed> — <observed delegated result or not run>
 - Merge step: <succeeded|skipped|failed> — <observed merge/verification result, stop reason, or not run>
 - Tracker completion: <succeeded|skipped|failed> — <observed delegated result or not run>
-Stop reason: <completed one-shot action|dry-run plan completed|queue empty|blocked|failed|review blocking|review cannot run|PR not green|merge failed|merge verification failed|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
+Stop reason: <completed one-shot action|dry-run plan completed|queue empty|blocked|failed|review blocking|review cannot run|PR not green|checks failing|merge conflict|unexpected PR state|merge failed|merge verification failed|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
 Next recommended human action: <merge/review/fix/configure/run suggested command/no action>
 ```
 

@@ -77,24 +77,24 @@ git checkout -b flock/issue-<number>-<short-slug>
 
 ## Gate
 
-No repository-specific validation command is currently configured.
-
-Observed facts:
-- `package.json` exists.
-- `package.json` has no `scripts` section.
-- No `.github/workflows`, `Makefile`, `justfile`, `mise.toml`, or language package manifest with test commands was found during the initial check.
-
-For documentation-only changes, use:
+Repository validation command:
 
 ```bash
-git diff --check
+npm run check
 ```
 
-For TypeScript extension changes, no local gate has been confirmed yet. Add one when the repository has a lint/typecheck/test command.
+This runs:
+
+```bash
+npm run typecheck && git diff --check
+```
+
+For documentation-only changes, `git diff --check` is usually sufficient, but `npm run check` is the default gate for Flock changes.
 
 Notes:
-- `git diff --check` only catches whitespace/conflict-marker style problems. It is not a functional test.
-- Do not report functional verification for extension changes unless a real command has been added and run.
+- `npm run typecheck` validates TypeScript extension files under `.pi/extensions/**/*.ts`.
+- `git diff --check` catches whitespace and conflict-marker issues.
+- This repository does not yet have behavior/unit tests for skills or prompt templates.
 
 ## PR
 
@@ -166,4 +166,4 @@ Auto-merge: no
 
 ## Open Questions
 
-- What local validation command should be added for TypeScript extension changes?
+- Should Flock add behavior tests for prompt/skill loading beyond TypeScript extension typechecking?

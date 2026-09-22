@@ -111,6 +111,7 @@ Branch:
 PR:
 Validation:
 Review verdict:
+Tracker completion:
 Workflow summary:
 Changed:
 Verified:
@@ -157,7 +158,7 @@ If the prior issue left an open branch with committed work or an open PR, decide
 
 ## 7. Final report
 
-Return a final stage-by-stage summary. Mark every stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Include the issue number, branch name when available, PR link when available, validation result, review verdict, and next recommended human action. Do not claim validation or review occurred unless command output was observed; copy or condense the issue worker's stage statuses when an issue was dispatched.
+Return a final stage-by-stage summary. Mark every stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Include the issue number, branch name when available, PR link when available, validation result, review verdict, tracker completion result, and next recommended human action. Do not claim validation, review, or tracker completion occurred unless command output was observed; copy or condense the issue worker's stage statuses when an issue was dispatched.
 
 ```md
 Processed: <count>
@@ -167,6 +168,7 @@ Branch: <branch name when available, or "not created">
 PR: <PR link when available, or "not opened">
 Validation: <validation result from observed command output, or "not run">
 Review verdict: <review verdict from observed review output, or "not run">
+Tracker completion: <completion result from observed tracker command output, or "not run">
 Workflow summary:
 - Issue selection: <succeeded|skipped|failed> — <observed result or stop reason>
 - Branch setup: <succeeded|skipped|failed> — <observed result or stop reason>
@@ -174,6 +176,7 @@ Workflow summary:
 - Validation: <succeeded|skipped|failed> — <observed result or stop reason>
 - PR creation/update: <succeeded|skipped|failed> — <observed result or stop reason>
 - Review: <succeeded|skipped|failed> — <observed result or stop reason>
+- Tracker completion: <succeeded|skipped|failed> — <observed result or stop reason>
 Summary:
 - #<number>: <PR or branch> — <result>
 Next recommended human action:

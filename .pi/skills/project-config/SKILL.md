@@ -118,7 +118,7 @@ When present, Flock skills should prefer `docs/flock/project.md` over built-in d
 - base branch
 - validation commands
 - review escalation triggers
-- PR and issue closing policy
+- PR and tracker completion policy
 - merge/retry policy
 
 When absent, Flock skills may use conservative defaults, but should mention that `/project-config` can make the workflow repo-specific.

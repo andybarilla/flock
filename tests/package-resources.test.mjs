@@ -183,6 +183,37 @@ test("issue workflow instructions require automatic separate review when a targe
 	assert.match(issueLoopSkill, /Review:/);
 });
 
+test("supervised issue workflows require accurate final stage summaries", async () => {
+	const issuePrompt = await readFile(join(repoRoot, ".pi", "prompts", "issue.md"), "utf8");
+	const workPrompt = await readFile(join(repoRoot, ".pi", "prompts", "work.md"), "utf8");
+	const issueWorkerSkill = await readFile(join(repoRoot, ".pi", "skills", "github-issue-worker", "SKILL.md"), "utf8");
+	const issueLoopSkill = await readFile(join(repoRoot, ".pi", "skills", "issue-loop", "SKILL.md"), "utf8");
+
+	for (const content of [issuePrompt, workPrompt, issueWorkerSkill, issueLoopSkill]) {
+		assert.match(content, /stage-by-stage summary/);
+		assert.match(content, /succeeded, skipped, or failed/);
+		assert.match(content, /stop reason/);
+		assert.match(content, /issue number/);
+		assert.match(content, /branch name/);
+		assert.match(content, /PR link/);
+		assert.match(content, /validation result/);
+		assert.match(content, /review verdict/);
+		assert.match(content, /next recommended human action/);
+		assert.match(content, /Do not claim validation or review occurred unless command output was observed/);
+	}
+
+	assert.match(issueWorkerSkill, /Issue selection: <succeeded\|skipped\|failed/);
+	assert.match(issueWorkerSkill, /Branch setup: <succeeded\|skipped\|failed/);
+	assert.match(issueWorkerSkill, /Implementation: <succeeded\|skipped\|failed/);
+	assert.match(issueWorkerSkill, /Validation: <succeeded\|skipped\|failed/);
+	assert.match(issueWorkerSkill, /PR creation\/update: <succeeded\|skipped\|failed/);
+	assert.match(issueWorkerSkill, /Review: <succeeded\|skipped\|failed/);
+	assert.match(issueWorkerSkill, /BLOCKED: <reason>/);
+	assert.match(issueWorkerSkill, /Next recommended human action: <question, decomposition, or human action>/);
+	assert.match(issueWorkerSkill, /skipped — not run/);
+	assert.match(issueLoopSkill, /copy or condense the issue worker's stage statuses/);
+});
+
 test("skills load from .pi/skills with required descriptions", () => {
 	const { skills, diagnostics } = loadSkillsFromDir({
 		dir: join(repoRoot, ".pi", "skills"),

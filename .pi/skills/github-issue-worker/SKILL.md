@@ -70,11 +70,24 @@ Stop and report instead of implementing when:
 - the requested work appears already completed
 - credentials, production access, or a human decision are required
 
-If it is not dispatchable, return:
+If it is not dispatchable, return a final stage-by-stage summary. Mark each stage as succeeded, skipped, or failed, include the stop reason for the failed stage, and do not claim validation or review occurred unless command output was observed:
 
 ```md
 BLOCKED: <reason>
-Issue: <url>
+Issue: #<number> <title>
+URL: <url>
+Branch: <branch name when available, or "not created">
+PR: <PR link when available, or "not opened">
+Validation: <validation result, or "not run">
+Review: <review verdict, or "not run">
+Workflow summary:
+- Issue selection: <succeeded|skipped|failed> — <observed result or stop reason>
+- Branch setup: <succeeded|skipped|failed> — <observed result or stop reason>
+- Implementation: <succeeded|skipped|failed> — <observed result or stop reason>
+- Validation: <succeeded|skipped|failed> — <observed result or stop reason>
+- PR creation/update: <succeeded|skipped|failed> — <observed result or stop reason>
+- Review: <succeeded|skipped|failed> — <observed result or stop reason>
+Next recommended human action: <question, decomposition, or human action>
 Needed: <question, decomposition, or human action>
 ```
 
@@ -157,7 +170,7 @@ git diff --stat
 git diff --check
 ```
 
-Do not claim a check passed unless you read its output.
+Do not claim a check passed unless you read its output. Record the observed command output/result for the final validation result. Do not claim validation or review occurred unless command output was observed.
 
 ## 8. Commit and PR
 
@@ -205,20 +218,30 @@ The review output must include findings and a merge/readiness verdict, using the
 
 ## 10. Handoff
 
-Return exactly:
+Return exactly this final stage-by-stage summary. Mark every stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Include the issue number, branch name when available, PR link when available, validation result, review verdict, and next recommended human action. Do not claim validation or review occurred unless command output was observed; use `skipped — not run` when a stage did not run.
 
 ```md
 Issue: #<number> <title>
-Branch: <branch>
-PR: <url or "not opened">
+Branch: <branch name when available, or "not created">
+PR: <PR link when available, or "not opened">
+Validation: <validation result from observed command output, or "not run">
+Review verdict: <review verdict from observed review output, or "not run">
+Workflow summary:
+- Issue selection: <succeeded|skipped|failed> — <observed result or stop reason>
+- Branch setup: <succeeded|skipped|failed> — <observed result or stop reason>
+- Implementation: <succeeded|skipped|failed> — <observed result or stop reason>
+- Validation: <succeeded|skipped|failed> — <observed result or stop reason>
+- PR creation/update: <succeeded|skipped|failed> — <observed result or stop reason>
+- Review: <succeeded|skipped|failed> — <observed result or stop reason>
 Changed: <one or two sentences>
-Verified: <commands run and observed result>
+Verified: <commands run and observed result, or "not run">
 Review: <review target and verdict, or clear reason review did not run>
+Next recommended human action: <merge/review/fix/unblock/no action, based only on observed results>
 Left out: <or "nothing">
 Unsure about: <or "nothing">
 ```
 
-If blocked, use the blocked format from step 3.
+If blocked, use the blocked format from step 3 with the same stage names and evidence rules.
 
 ## Red flags
 

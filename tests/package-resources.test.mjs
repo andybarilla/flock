@@ -275,6 +275,19 @@ test("operator run workflow is exposed and bounded", async () => {
 	assert.match(operatorRunSkill, /gh pr merge <number> --squash/);
 	assert.match(operatorRunSkill, /verified check-wait command/);
 	assert.match(operatorRunSkill, /CHANGES_REQUESTED/);
+	assert.match(operatorRunSkill, /fail-closed/);
+	assert.match(operatorRunSkill, /An inconclusive result never merges/);
+	assert.match(operatorRunSkill, /resume target/);
+	assert.match(operatorRunSkill, /its author is the authenticated account/);
+	assert.match(operatorRunSkill, /its linked issue is open/);
+	assert.match(operatorRunSkill, /flock-operator-run` provenance marker comment authored by the authenticated account/);
+	assert.match(operatorRunSkill, /a marker comment from any other author is meaningless/);
+	assert.match(operatorRunSkill, /never merge it/);
+	assert.match(operatorRunSkill, /fresh non-blocking `pr-review` verdict/);
+	assert.match(operatorRunSkill, /expected safe state/);
+	assert.match(operatorRunSkill, /ends the run instead of continuing/);
+	assert.match(operatorRunSkill, /action=<work\|resume\|triage\|groom\|review\|stop>/);
+	assert.match(operatorRunSkill, /origin\/\u003cdefault-branch>/);
 	assert.match(operatorRunSkill, /the operator performs `gh issue close[^`]*` only after the merge is verified/);
 	assert.match(operatorRunSkill, /Do not claim validation, review, tracker changes, or tracker completion unless command output/);
 });
@@ -352,6 +365,7 @@ test("project config documents operator approval policy", async () => {
 	assert.match(projectConfig, /Max PR wait per issue: 15m/);
 	assert.match(projectConfig, /squash/);
 	assert.match(projectConfig, /Check-wait command \(verified/);
+	assert.match(projectConfig, /PR author is the authenticated account/);
 	assert.match(projectConfig, /IN\("SUCCESS","SKIPPED","NEUTRAL"\)/);
 	assert.match(projectConfig, /fail-closed/);
 	assert.match(projectConfig, /Issue closure happens after merge/);

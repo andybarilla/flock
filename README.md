@@ -96,5 +96,6 @@ See [ROADMAP.md](ROADMAP.md).
 ## Design docs
 
 - [Operating model](docs/operating-model.md)
+- [Bounded Flock operator workflow](docs/operator-workflow.md)
 - [Porting notes](docs/porting-notes.md)
 - [v0.1 dogfood checklist](docs/dogfood-checklist.md)

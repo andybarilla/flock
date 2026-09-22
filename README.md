@@ -15,6 +15,7 @@ Prompt templates:
 - `/groom` — classify GitHub issues toward a ready-for-agent queue target
 - `/triage` — resolve `needs-triage` issues into ready, blocked, human, info, or explicit decision states
 - `/project-config` — create or check repo-specific Flock configuration
+- `/operate` — run a bounded Flock operator plan, one-shot cycle, or policy-limited loop
 - `/manager` — assess repo/team status, queue health, blockers, and next action
 - `/product` — shape product goals into requirements, priorities, and agent-ready issue briefs
 - `/lead` — plan, sequence, decompose, and route technical work
@@ -33,6 +34,8 @@ Skills:
 - `groom` — classify GitHub issues and stock the ready queue
 - `triage` — move `needs-triage` issues to the most accurate state, including `blocked`, when decisions are resolved
 - `project-config` — create or check `docs/flock/project.md`
+- `operator-plan` — produce a read-only dry-run operator plan with one recommended next action
+- `operator-run` — run a bounded operator cycle or policy-limited loop that delegates to existing workflows
 - `engineering-manager` — assess status, queue health, blockers, and next action
 - `product-manager` — shape product goals into requirements, priorities, and agent-ready issue briefs
 - `tech-lead` — plan, sequence, decompose, and route technical work
@@ -64,6 +67,8 @@ Start every new repository session with the read-only status command:
 | Command | Use when | Mutates files or tracker state? |
 | --- | --- | --- |
 | `/flock-status` | You need status, blockers, and the next recommended command. | No |
+| `/operate --dry-run` or `/operate --plan` | You want Flock to inspect repo/tracker state and recommend exactly one safe next workflow without changing anything. | No |
+| `/operate --yes` or `/operate --loop ...` | You want a bounded operator cycle or policy-limited loop that delegates to existing workflows and stops at safety limits or blockers. Requires project config with an explicit Operator Approval Policy. | Yes, only when policy permits; never merges |
 | `/product` | A feature idea or user outcome needs product shaping, acceptance criteria, or prioritization. | No by default |
 | `/lead` | Work needs technical decomposition, sequencing, risk assessment, or workflow routing. | No by default |
 | `/scout-and-plan` | An unclear area needs deeper repository reconnaissance and an implementation plan. | No |
@@ -74,7 +79,7 @@ Start every new repository session with the read-only status command:
 | `/pr-review <number>` | An open pull request needs review. | No by default |
 | `/implement` or `/implement-and-review` | You have an explicit implementation task rather than a GitHub issue. | Yes, edits files |
 
-Human merge remains the policy: Flock can prepare or review PRs, but a human decides when to merge. If a dogfood checklist exists in this repository, read it after `/flock-status` to confirm the current validation target before starting mutating work.
+Human merge remains the policy: Flock can prepare or review PRs, but a human decides when to merge. Operator workflows preserve that rule: `/operate` orchestrates existing Flock workflows, requires explicit policy for mutating modes, and never auto-merges. If a dogfood checklist exists in this repository, read it after `/flock-status` to confirm the current validation target before starting mutating work.
 
 ## Installation
 

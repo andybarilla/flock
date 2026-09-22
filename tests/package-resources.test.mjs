@@ -318,6 +318,91 @@ test("operator run workflow supports bounded loop mode with audited stop conditi
 	assert.match(operatorWorkflow, /Loop mode is available for trusted repositories/);
 });
 
+test("operator herdr worker dispatch is gated, fail-stop, and independently verified", async () => {
+	const operatorRunSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-run", "SKILL.md"), "utf8");
+	const issueWorkerSkill = await readFile(join(repoRoot, ".pi", "skills", "github-issue-worker", "SKILL.md"), "utf8");
+	const projectConfig = await readFile(join(repoRoot, "docs", "flock", "project.md"), "utf8");
+
+	// Activation gate: HERDR_ENV=1 plus a config-defined worktree pattern; otherwise unchanged.
+	assert.match(operatorRunSkill, /## 5a\. Herdr worker dispatch/);
+	assert.match(operatorRunSkill, /HERDR_ENV/);
+	assert.match(operatorRunSkill, /behavior outside Herdr is unchanged/);
+	assert.match(operatorRunSkill, /never relaxes any gate/);
+
+	// Dispatch sequence: worktree pane, named pi agent, bounded prompt wait.
+	assert.match(operatorRunSkill, /herdr worktree create/);
+	assert.match(operatorRunSkill, /--no-focus/);
+	assert.match(operatorRunSkill, /herdr agent start issue-<n> --kind pi --pane <pane-id>/);
+	assert.match(operatorRunSkill, /herdr agent prompt issue-<n>/);
+	assert.match(operatorRunSkill, /--wait --timeout <per-issue-ms>/);
+
+	// Distinct fail-stop reasons; no dialog answering or re-prompting.
+	assert.match(operatorRunSkill, /worker blocked/);
+	assert.match(operatorRunSkill, /worker timeout/);
+	assert.match(operatorRunSkill, /worker not ready/);
+	assert.match(operatorRunSkill, /worker stalled/);
+	assert.match(operatorRunSkill, /agent_not_ready/);
+	assert.match(operatorRunSkill, /agent_prompt_stalled/);
+	assert.match(operatorRunSkill, /Never answer the nested approval dialog/);
+	assert.match(operatorRunSkill, /never re-prompt/);
+	assert.match(operatorRunSkill, /worktree create failed/);
+	assert.match(operatorRunSkill, /worker handoff missing/);
+	assert.match(operatorRunSkill, /worker claim mismatch/);
+
+	// Handoff file convention and independent supervisor verification.
+	assert.match(operatorRunSkill, /\.flock\/handoff-issue-<n>\.md/);
+	assert.match(operatorRunSkill, /never records worker claims from the handoff alone/);
+	assert.match(operatorRunSkill, /git ls-remote --heads origin <branch>/);
+	assert.match(operatorRunSkill, /gh pr list --state open --head <branch>/);
+	assert.match(operatorRunSkill, /reviewDecision/);
+
+	// Review fixes: mutation gate carve-out, supervisor-observed review, early
+	// provenance marker, and defined agent-start failure handling.
+	assert.match(
+		operatorRunSkill,
+		/must dispatch through the `issue-loop` workflow with `--yes --limit 1`, or through the section 5a Herdr worker dispatch when it is active/,
+	);
+	assert.match(operatorRunSkill, /the supervisor dispatches a fresh `pr-review` for the PR from its own session/);
+	assert.match(operatorRunSkill, /before the validation and review legs/);
+	assert.match(operatorRunSkill, /Any `herdr agent start` failure/);
+
+	// Re-review fixes: resume re-establishes validation, Herdr selection bound,
+	// and the provenance marker is posted exactly once.
+	assert.match(operatorRunSkill, /re-run the configured gate command against the PR head/);
+	assert.match(operatorRunSkill, /validation evidence: the configured gate command passed against the PR head in this run/);
+	assert.match(operatorRunSkill, /exactly one issue per cycle/);
+	assert.match(operatorRunSkill, /post it once/);
+
+	// Round-3 review fixes: summary resume criteria include the validation leg,
+	// the gate re-run certifies the pushed PR head (sha equality), and the
+	// marker dedupe guard checks marker authorship.
+	assert.match(operatorRunSkill, /the configured gate command re-run against the PR head passed in the resuming run/);
+	assert.match(projectConfig, /the configured gate command re-run against the PR head passed in the resuming run/);
+	assert.match(operatorRunSkill, /rev-parse HEAD/);
+	assert.match(operatorRunSkill, /headRefOid/);
+	assert.match(operatorRunSkill, /marker comment authored by the authenticated account is already present/);
+
+	// Run log records agent, pane/workspace IDs, worktree path, and verification.
+	assert.match(operatorRunSkill, /Herdr dispatch: <enabled\|disabled/);
+	assert.match(operatorRunSkill, /agent=<issue-<n>\|none>/);
+	assert.match(operatorRunSkill, /pane=<pane-id\|none>/);
+	assert.match(operatorRunSkill, /worktree=<path\|none>/);
+	assert.match(operatorRunSkill, /verification=<branch\/PR\/validation\/review re-verified/);
+
+	// Nested worker mode in the issue worker skill.
+	assert.match(issueWorkerSkill, /## Herdr worktree dispatch \(nested worker mode\)/);
+	assert.match(issueWorkerSkill, /[Tt]he issue branch already exists and is checked out/);
+	assert.match(issueWorkerSkill, /skip step 5 branch creation/);
+	assert.match(issueWorkerSkill, /Never commit the handoff file/);
+
+	// Project config documents the optional Herdr worktree pattern.
+	assert.match(projectConfig, /## Herdr/);
+	assert.match(projectConfig, /Herdr worker dispatch: enabled/);
+	assert.match(projectConfig, /Worktree pattern:/);
+	assert.match(projectConfig, /Per-issue worker timeout: 45m/);
+	assert.match(projectConfig, /absent = herdr dispatch disabled|absent, herdr dispatch is disabled/);
+});
+
 test("operator dry-run plan workflow is exposed and read-only", async () => {
 	const operatorPlanSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-plan", "SKILL.md"), "utf8");
 	const operatorRunSkill = await readFile(join(repoRoot, ".pi", "skills", "operator-run", "SKILL.md"), "utf8");

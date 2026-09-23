@@ -197,7 +197,7 @@ Post-merge cleanup: after a verified merge and issue close, the operator removes
 Policy: one bounded automatic rework pass per issue per operator run for non-critical blocking review findings (Herdr dispatch only)
 
 Notes:
-- When the supervisor's fresh `pr-review` verdict is BLOCKING and every blocking finding is severity Important or Minor, the operator may send exactly one rework prompt to the existing nested worker (same pane, worktree, branch, PR) with the findings verbatim. Any Critical finding, or any second blocking verdict, stops the run for a human.
+- When the supervisor's fresh `pr-review` verdict is BLOCKING and every blocking finding is severity Important or Minor, the operator may send exactly one rework prompt to the existing nested worker (same pane, worktree, branch, PR) with the findings verbatim. Any Critical finding, or any second blocking verdict, ends automated work on that issue: no rework pass and no merge — the PR is parked for a human, with grooming/triage continuation only (see the parked-PR note below).
 - The rework pass reuses the existing worker session; the operator never starts a second agent for the issue, never creates a new branch or PR, and never answers nested approval dialogs.
 - After rework, all evidence is re-established from scratch: the worker rewrites the handoff file with a `Rework: complete` marker and a findings-addressed list, the supervisor confirms the PR head sha advanced and matches the worktree HEAD, re-runs the gate command, and dispatches a fresh `pr-review`. Recycled review or validation claims are never accepted.
 - Each rework pass counts as an additional worked issue against Max issues worked per operator run and is bounded by remaining Max runtime and the per-issue worker timeout.
@@ -224,7 +224,7 @@ Approval categories:
 - Branch creation: auto-approve for issue branches matching `flock/issue-<number>-<short-slug>` from `main`.
 - Commits: auto-approve scoped commits on the issue branch after validation has been run.
 - PR creation/update: auto-approve PR creation or updates using neutral `Refs #<number>` references.
-- Review rework dispatch: auto-approve exactly one rework prompt per issue per run per the Rework policy (non-critical blocking findings only, existing Herdr worker session); Critical findings and second blocking verdicts remain human-handled.
+- Review rework dispatch: auto-approve exactly one rework prompt per issue per run per the Rework policy (non-critical blocking findings only, existing Herdr worker session); Critical findings and second blocking verdicts end automated work on the issue and remain human-handled.
 - Tracker completion/issue close: auto-approve only through the issue worker completion policy after verified merge of the issue's PR on `main`.
 - Merge: auto-approve squash merge of PRs opened by the operator in the current run, or meeting the documented resume criteria, when green per the Merge policy above; all other PRs remain human-merged.
 

@@ -43,7 +43,7 @@ The supervisor may send one follow-up prompt containing blocking review findings
 - Address each finding on the existing issue branch in this worktree. Commit and push to update the existing PR; never create a new branch or PR, and never close the issue.
 - Re-run the full validation gate after the fixes and record the observed output.
 - Do not review your own rework; the supervisor dispatches a fresh review. Report what changed, nothing more.
-- Rewrite the handoff file with the full step 11 format plus a `Rework: complete` line and a `Findings addressed:` list mapping each finding to its fix (or a clear reason it was not addressed). Return the updated handoff in the session as well, and never commit the handoff file.
+- Rewrite the handoff file with the full step 11 format plus a `Rework: complete` line and a `Findings addressed:` list mapping each finding to its fix (or a clear reason it was not addressed). Set the handoff's review fields to `not run — supervisor review pending`; the supervisor's fresh review is the only review evidence after rework. Return the updated handoff in the session as well, and never commit the handoff file.
 - If a finding shows the issue scope was wrong, or a finding cannot be addressed safely, write the BLOCKED handoff instead (with a `Rework: blocked` line and the reason) and stop; do not wait for human input.
 
 ## 1. Preflight

@@ -2,6 +2,7 @@
 name: ic-review
 description: Read-only code reviewer. Reviews a PR or diff and returns CLEAN or BLOCKING findings.
 tools: read, grep, find, ls, bash
+model: openai-codex/gpt-5.5:high
 ---
 
 Use the Flock `ic-review` workflow.

@@ -2,6 +2,7 @@
 name: product-manager
 description: Product manager agent for product goals, requirements, prioritization, vertical slicing, and agent-ready issue briefs. Does not implement by default.
 tools: read, grep, find, ls, bash
+model: kimi-coding/k3
 ---
 
 Use the Flock `product-manager` workflow.

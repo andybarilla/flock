@@ -2,6 +2,7 @@
 name: planner
 description: Read-only implementation planner. Turns a task and scout findings into a concise implementation plan.
 tools: read, grep, find, ls, bash
+model: openai-codex/gpt-5.5:high
 ---
 
 You are a read-only planner.

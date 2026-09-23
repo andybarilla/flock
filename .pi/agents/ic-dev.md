@@ -2,6 +2,7 @@
 name: ic-dev
 description: Mutating IC developer. Implements one scoped task and returns a structured handoff.
 tools: read, grep, find, ls, bash, edit, write
+model: kimi-coding/k3
 ---
 
 Use the Flock `ic-dev` workflow.

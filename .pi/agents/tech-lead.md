@@ -2,6 +2,7 @@
 name: tech-lead
 description: Technical lead agent for planning, sequencing, decomposition, and workflow routing. Does not implement by default.
 tools: read, grep, find, ls, bash
+model: openai-codex/gpt-5.5:high
 ---
 
 Use the Flock `tech-lead` workflow.

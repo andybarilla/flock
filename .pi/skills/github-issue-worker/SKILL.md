@@ -36,6 +36,16 @@ The `operator-run` skill may dispatch this workflow into a nested pi session run
 
 Everything else in this workflow is unchanged: project config, dispatchability check, restate done, implement, verify, commit/PR, review handoff, and tracker completion policy all still apply. The supervisor independently re-verifies every claim in the handoff, so record only observed command output.
 
+### Rework prompts
+
+The supervisor may send one follow-up prompt containing blocking review findings (per the project config Rework policy — at most one per issue per run, and never for Critical findings, which are routed to a human). A rework prompt replaces the original implementation scope: the findings are the work.
+
+- Address each finding on the existing issue branch in this worktree. Commit and push to update the existing PR; never create a new branch or PR, and never close the issue.
+- Re-run the full validation gate after the fixes and record the observed output.
+- Do not review your own rework; the supervisor dispatches a fresh review. Report what changed, nothing more.
+- Rewrite the handoff file with the full step 11 format plus a `Rework: complete` line and a `Findings addressed:` list mapping each finding to its fix (or a clear reason it was not addressed). Set the handoff's review fields to `not run — supervisor review pending`; the supervisor's fresh review is the only review evidence after rework. Return the updated handoff in the session as well, and never commit the handoff file.
+- If a finding shows the issue scope was wrong, or a finding cannot be addressed safely, write the BLOCKED handoff instead (with a `Rework: blocked` line and the reason) and stop; do not wait for human input.
+
 ## 1. Preflight
 
 Confirm this is a Git repository with a GitHub remote:
@@ -286,3 +296,4 @@ If blocked, use the blocked format from step 3 with the same stage names and evi
 | "A comment asked a question, so it is blocked." | Later comments may answer it; read chronologically. |
 | "The PR body says Refs, so closing keywords are safe in commits." | GitHub can close from the squash commit body. Check commit messages and use explicit tracker completion instead. |
 | "The subagent did the work, so I don't need to inspect anything." | You still own the handoff and verification claims. |
+| "A rework prompt means re-verifying the whole issue from scratch." | Rework scope is the findings: fix them, re-run the gate, update the existing PR, rewrite the handoff with `Rework: complete`. |

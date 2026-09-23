@@ -192,12 +192,25 @@ Per-issue worker timeout: 45m (bounded further by remaining Max runtime).
 Handoff file: `<worktree-root>/.flock/handoff-issue-<number>.md`, written by the nested worker, read by the supervisor, never committed.
 Post-merge cleanup: after a verified merge and issue close, the operator removes the run-created worktree and workspace (see the `operator-run` skill, section 6): delete the never-committed handoff file, confirm the worktree is otherwise clean (never `--force` past unexpected state), then `herdr worktree remove --workspace <workspace-id>`, scoped strictly to resources created in the current run via the creation-time recorded IDs. Failed, blocked, timed-out, or merge-stopped workers keep their pane and worktree for human inspection and are itemized in the final run log; stale worktrees from previous runs are report-only (enumerated via `herdr worktree list`), never auto-removed.
 
+## Rework
+
+Policy: one bounded automatic rework pass per issue per operator run for non-critical blocking review findings (Herdr dispatch only)
+
+Notes:
+- When the supervisor's fresh `pr-review` verdict is BLOCKING and every blocking finding is severity Important or Minor, the operator may send exactly one rework prompt to the existing nested worker (same pane, worktree, branch, PR) with the findings verbatim. Any Critical finding, or any second blocking verdict, ends automated work on that issue: no rework pass and no merge — the PR is parked for a human, with grooming/triage continuation only (see the parked-PR note below).
+- The rework pass reuses the existing worker session; the operator never starts a second agent for the issue, never creates a new branch or PR, and never answers nested approval dialogs.
+- After rework, all evidence is re-established from scratch: the worker rewrites the handoff file with a `Rework: complete` marker and a findings-addressed list, the supervisor confirms the PR head sha advanced and matches the worktree HEAD, re-runs the gate command, and dispatches a fresh `pr-review`. Recycled review or validation claims are never accepted.
+- Each rework pass counts as an additional worked issue against Max issues worked per operator run and is bounded by remaining Max runtime and the per-issue worker timeout.
+- Rework requires Herdr dispatch (a live worker session). In-session issue work has no rework pass: blocking review stops the run with the usual resumable handoff.
+- Parked PR continuation: when an issue cycle ends `review blocking` (after any allowed rework pass), the loop may continue with grooming or triage cycles only — never further issue work — while the PR awaits human review. Parked PRs are re-checked each decision pass (a human merge/close removes one; a `Rework: complete` handoff with an advanced head sha makes it a resume candidate) and itemized in every run log.
+
 ## Retry
 
 Policy: no retry
 
 Notes:
 - Flock v1 issue-loop stops on blocked/failed work.
+- The single bounded exception is the Rework policy above: one review-finding rework pass per issue per run under Herdr dispatch, for non-critical blocking findings only.
 - Retry policy can be revisited after claim/label behavior and gates are stable.
 
 ## Operator Approval Policy
@@ -211,12 +224,14 @@ Approval categories:
 - Branch creation: auto-approve for issue branches matching `flock/issue-<number>-<short-slug>` from `main`.
 - Commits: auto-approve scoped commits on the issue branch after validation has been run.
 - PR creation/update: auto-approve PR creation or updates using neutral `Refs #<number>` references.
+- Review rework dispatch: auto-approve exactly one rework prompt per issue per run per the Rework policy (non-critical blocking findings only, existing Herdr worker session); Critical findings and second blocking verdicts end automated work on the issue and remain human-handled.
 - Tracker completion/issue close: auto-approve only through the issue worker completion policy after verified merge of the issue's PR on `main`.
 - Merge: auto-approve squash merge of PRs opened by the operator in the current run, or meeting the documented resume criteria, when green per the Merge policy above; all other PRs remain human-merged.
 
 Limits:
 - Max cycles per operator run: 5
 - Max issues worked per operator run: 3
+- Max rework passes per issue per operator run: 1 (counts against Max issues worked)
 - Max grooming batches per operator run: 1
 - Max triage issues per operator run: 5
 - Max PR wait per issue: 15m
@@ -228,7 +243,7 @@ Stop conditions:
 - auth, branch, validation, PR, review, or tracker failure
 - blocking product or technical question
 - ambiguous, too broad, already complete, or non-dispatchable issue
-- failed validation or blocking review
+- failed validation, or blocking review after the single permitted rework pass (Critical findings stop immediately, without rework)
 - configured limits reached
 
 ## Workflow Defaults

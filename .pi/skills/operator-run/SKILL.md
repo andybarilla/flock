@@ -63,10 +63,10 @@ If configured labels differ from defaults, use the labels from `docs/flock/proje
 When `--focus <label>` is present, the ready-issue listing must filter to issues carrying both the ready label and the focus label, using exactly:
 
 ```bash
-gh issue list --state open --label ready-for-agent --label <focus> --json number,title,labels,updatedAt,url --limit 50
+gh issue list --state open --label <label> --label <focus> --json number,title,labels,updatedAt,url --limit 50
 ```
 
-Substitute the configured ready label for `ready-for-agent` and the `--focus` value for `<focus>`; the focus filter composes with `--label`, it does not replace it. If the focus set is empty — no ready issues carry the focus label, or the label does not exist — stop with reason `focus queue empty`; nothing is dispatched and the operator never falls back to the general ready queue. Focus does not affect the triage, backlog, or PR listings, and triage, groom, review, and merge cycles stay global.
+Substitute the active ready label (the `--label` value after CLI/config defaults) for `<label>` and the `--focus` value for `<focus>`; the focus filter composes with `--label`, it does not replace it. If the focus set is empty — no ready issues carry the focus label, or the label does not exist — stop with reason `focus queue empty`; nothing is dispatched and the operator never falls back to the general ready queue. Focus does not affect the triage, backlog, or PR listings, and triage, groom, review, and merge cycles stay global.
 
 Recommended action priority:
 
@@ -144,6 +144,13 @@ Examples:
 ```md
 Use the `issue-loop` skill to work ready GitHub issues from this repository.
 Arguments: --label <label> --limit 1 --yes
+```
+
+When `--focus <focus>` is present, pass it through so the delegated loop selects from the same focused set the decision pass used:
+
+```md
+Use the `issue-loop` skill to work ready GitHub issues from this repository.
+Arguments: --label <label> --focus <focus> --limit 1 --yes
 ```
 
 ```md

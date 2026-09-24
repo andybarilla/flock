@@ -57,10 +57,10 @@ gh issue list --state open --label <label> --json number,title,labels,updatedAt,
 When `--focus <label>` is present, scope candidates to issues carrying both the ready label and the focus label, using exactly:
 
 ```bash
-gh issue list --state open --label ready-for-agent --label <focus> --json number,title,labels,updatedAt,url --limit 50
+gh issue list --state open --label <label> --label <focus> --json number,title,labels,updatedAt,url --limit 50
 ```
 
-Substitute the configured ready label for `ready-for-agent` and the `--focus` value for `<focus>`; the focus filter composes with `--label`, it does not replace it.
+Substitute the active ready label (the `--label` value after CLI/config defaults) for `<label>` and the `--focus` value for `<focus>`; the focus filter composes with `--label`, it does not replace it.
 
 If no issues are found, report that the queue is empty for the selected label and stop. With `--focus`, an empty focus set — no ready issues carry the focus label, or the label does not exist — stops with reason `focus queue empty`; never fall back to the general ready queue.
 

@@ -22,7 +22,7 @@ Parse user arguments for:
 - `--max-triage-issues <n>`: max triage issues in this run
 - `--max-runtime <duration>`: max wall-clock runtime, such as `10m`; require an explicit value for loop mode unless project config supplies one
 - `--label <label>`: ready issue label, default `ready-for-agent`
-- `--focus <label>`: scope ready-issue selection to issues that also carry `<label>`; the focus filter composes with `--label`, it does not replace it. Focus has no effect on triage, groom, review, or merge cycles — those stay global. Herdr worker dispatch (section 5a) is unchanged: selection happens upstream, so worker briefs need no focus changes
+- `--focus <label|issue-number>`: scope ready-issue selection. A non-numeric value is a focus label: scope selection to issues that also carry `<label>`. A numeric value names an epic issue: scope selection to the epic's blocked-by dependency chain (epic mode, section 2). The focus filter composes with `--label`, it does not replace it. Focus has no effect on triage, groom, review, or merge cycles — those stay global. Herdr worker dispatch (section 5a) is unchanged: selection happens upstream, so worker briefs need no focus changes
 
 If parsing is ambiguous, ask before any mutation.
 
@@ -60,13 +60,30 @@ gh pr list --state open --json number,title,url,headRefName,baseRefName,reviewDe
 
 If configured labels differ from defaults, use the labels from `docs/flock/project.md`.
 
-When `--focus <label>` is present, the ready-issue listing must filter to issues carrying both the ready label and the focus label, using exactly:
+When `--focus` carries a non-numeric label value, the ready-issue listing must filter to issues carrying both the ready label and the focus label, using exactly:
 
 ```bash
 gh issue list --state open --label <label> --label <focus> --json number,title,labels,updatedAt,url --limit 50
 ```
 
 Substitute the active ready label (the `--label` value after CLI/config defaults) for `<label>` and the `--focus` value for `<focus>`; the focus filter composes with `--label`, it does not replace it. If the focus set is empty — no ready issues carry the focus label, or the label does not exist — stop with reason `focus queue empty`; nothing is dispatched and the operator never falls back to the general ready queue. Focus does not affect the triage, backlog, or PR listings, and triage, groom, review, and merge cycles stay global.
+
+When the `--focus` value is numeric (`--focus <issue-number>`), it names an epic (a feature head) and selection runs in epic mode:
+
+- Focus set: the epic issue itself, when open and carrying the ready label, plus every open issue carrying the ready label whose blocked-by closure transitively includes the epic issue number.
+- GitHub native blocked-by relationships are the only dependency source of truth. Query them with:
+
+  ```bash
+  gh api repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by
+  ```
+
+  The endpoint returns a JSON array of the issues blocking `<n>`. Issue-body "Blocked by" text is human documentation only and is never parsed.
+- Discovery: list open issues carrying the ready label (limit 50), then for each candidate walk its blocked-by links transitively with the query above, to a maximum depth of 10 levels; the candidate joins the focus set when the walk reaches the epic issue number. Add the epic itself when it is open and ready.
+- Missing data: an empty relationships array means no dependency info is recorded for that issue — treat the issue as having no known blockers and never infer dependencies from any other source.
+- API error: when the dependency query fails, stop with reason `focus dependency query failed` and report the failing command and observed error; never guess dependency order.
+- Ordering: priority 5 dispatches the first dispatchable focus-set member in dependency order — every issue in its blocked-by list closed. When a member has an open blocker, skip it and record an explicit `blocked by #N` line in the cycle log naming the open blocker; never dispatch a member before its open blocker.
+- Re-evaluation: re-run the dependency queries in every decision pass, so a blocker closed or merged during the run makes its dependents eligible in the next pass.
+- An empty epic focus set — the epic is not open and ready and no ready issue's blocked-by closure includes it — stops with reason `focus queue empty`; nothing is dispatched and the operator never falls back to the general ready queue.
 
 Recommended action priority:
 
@@ -101,7 +118,7 @@ Queues:
 - Ready: <count and first issue when available>
 - Triage: <count and first issue when available>
 - Backlog/grooming: <short observed state>
-Focus: <focus label and matched issue numbers, or "none">
+Focus: <focus label and matched issue numbers; or, in epic mode, the epic issue number, the chain members, and the dispatchable/blocked breakdown with each skip's `blocked by #N` line; or "none">
 PRs/review: <short observed state>
 Recommended action: <groom|work|review PR|triage|stop|ask human>
 Why this action: <one or two sentences>
@@ -109,7 +126,7 @@ Alternatives not selected: <brief bullets or "none">
 Safety notes: <dirty tree, missing config, policy blockers, or "none">
 Next command: <suggested Flock command, or "none">
 Would mutate: no
-Stop reason: <dry-run plan completed|focus queue empty> — use `focus queue empty` when `--focus` is set and the focused ready set is empty
+Stop reason: <dry-run plan completed|focus queue empty|focus dependency query failed> — use `focus queue empty` when `--focus` is set and the focused ready set is empty, and `focus dependency query failed` when the epic-mode dependency query errors
 ```
 
 Do not claim validation, review, tracker changes, or completion in dry-run mode.
@@ -146,7 +163,7 @@ Use the `issue-loop` skill to work ready GitHub issues from this repository.
 Arguments: --label <label> --limit 1 --yes
 ```
 
-When `--focus <focus>` is present, pass it through so the delegated loop selects from the same focused set the decision pass used:
+When `--focus <focus>` is present, pass it through so the delegated loop selects from the same focused set the decision pass used. Pass the value through unchanged whether it is a label or an epic issue number:
 
 ```md
 Use the `issue-loop` skill to work ready GitHub issues from this repository.
@@ -331,6 +348,8 @@ When `--loop` is set, repeat the one-cycle process only while all conditions rem
 
 Parked PR register: when a cycle ends `review blocking`, record the PR (number, URL, linked issue, branch, agent/workspace/worktree when under Herdr, and a one-line verdict summary) in the parked PR register. Each later cycle's decision pass re-checks every parked PR: observed `MERGED` or `CLOSED` state removes it (a human handled it — note that in the cycle log); a handoff file containing `Rework: complete` with a PR head sha that advanced since the blocking verdict makes it the next cycle's resume candidate under the section 2 criteria — it leaves the parked register when its resume cycle begins, so the parked restriction does not block its own resume and merge; anything else stays parked. Every parked PR is itemized in the final run log with its resume instructions, and its worker pane and worktree stay in place for human inspection.
 
+Parked PR in a focus chain: when `--focus` is numeric and a cycle ends `review blocking` on a PR whose linked issue is a focus-set member, the parked-register rules above apply unchanged — no further issue work, focused or general, while the register is non-empty; only groom or triage cycles may continue. The run log's `Focus:` field must record the blockage as `Focus chain blocked at PR #<n> (issue #<m>, review blocking)`. In each later decision pass, dependents of the parked issue remain skipped with explicit `blocked by #<m>` lines. Resume follows the parked-register rules with no focus-specific exceptions: a `Rework: complete` handoff with an advanced head sha makes the parked PR the next cycle's resume candidate, and after its verified merge the chain is re-evaluated so newly unblocked dependents become eligible. Epic focus neither relaxes nor tightens parked-PR restrictions; the `Focus:` reporting line is the only focus-specific addition.
+
 Before continuing to the next cycle, run:
 
 ```bash
@@ -360,7 +379,7 @@ Repository: <owner/name>
 Project config: <found/missing and approval policy summary>
 Herdr dispatch: <enabled|disabled: missing HERDR_ENV=1 or missing config Herdr worktree pattern>
 Limits: <max cycles/issues/grooming/triage/runtime and observed counters>
-Focus: <focus label and matched issue numbers, or "none">
+Focus: <focus label and matched issue numbers; or, in epic mode, the epic issue number, the chain members, and a worked/skipped/blocked breakdown with each skip's `blocked by #N` line — plus `Focus chain blocked at PR #<n> (issue #<m>, review blocking)` when a focus-chain PR is parked; or "none">
 Chosen action: <work|triage|groom|review|stop|ask human>
 Delegated workflow: <issue-loop|triage|groom|pr-review|ic-review|none>
 Issue: #<number when available, or "none selected">
@@ -387,7 +406,7 @@ Workflow summary:
 - Rework: <succeeded|skipped|failed> — <dispatched outcome, or why not applicable>
 - Merge step: <succeeded|skipped|failed> — <observed merge/verification result, stop reason, or not run>
 - Tracker completion: <succeeded|skipped|failed> — <observed delegated result or not run>
-Stop reason: <completed one-shot action|dry-run plan completed|queue empty|focus queue empty|blocked|failed|review blocking|review cannot run|PR not green|checks failing|merge conflict|unexpected PR state|merge failed|merge verification failed|worker blocked|worker timeout|worker not ready|worker stalled|worker handoff missing|worker claim mismatch|worktree create failed|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
+Stop reason: <completed one-shot action|dry-run plan completed|queue empty|focus queue empty|focus dependency query failed|blocked|failed|review blocking|review cannot run|PR not green|checks failing|merge conflict|unexpected PR state|merge failed|merge verification failed|worker blocked|worker timeout|worker not ready|worker stalled|worker handoff missing|worker claim mismatch|worktree create failed|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
 Next recommended human action: <merge/review/fix/configure/run suggested command/no action>
 ```
 
@@ -407,3 +426,5 @@ Next recommended human action: <merge/review/fix/configure/run suggested command
 | "The worker is stuck on an approval dialog; I can approve it to keep the loop going." | Never answer nested approval dialogs and never re-prompt; stop with `worker blocked` (or the matching worker stop reason). |
 | "The herdr prompt stalled, so I'll send it again." | A stall does not prove non-delivery; stop with `worker stalled`. |
 | "HERDR_ENV=1 means issue work must go through Herdr." | Herdr dispatch also requires the config Herdr worktree pattern; without it the in-session flow is unchanged. |
+| "A focus-chain PR blocking review can be bypassed to keep epic work moving." | Parked-register rules apply unchanged to focus-chain PRs: only groom and triage cycles continue while it is parked, and the run log records `Focus chain blocked at PR #<n>`. |
+| "The issue body says \"Blocked by #5\", so it is blocked." | Issue-body text is documentation only; the GitHub blocked-by API is the sole dependency source of truth, and on API error the run stops rather than guessing order. |

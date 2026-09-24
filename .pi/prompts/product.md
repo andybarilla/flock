@@ -3,11 +3,11 @@ description: Act as a Flock product manager for goals, requirements, prioritizat
 argument-hint: "[goal|feature|backlog area]"
 ---
 
-Use the `product-manager` skill to clarify and shape this product work:
+Use the `subagent` tool with `agentScope: "both"` to delegate this work to the `product-manager` agent (it runs with its designated model):
 
 ${ARGUMENTS:-clarify product goal and propose next work}
 
-Default behavior:
+Instruct the agent to:
 
 - clarify user/customer outcome
 - identify assumptions and open product questions

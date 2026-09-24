@@ -3,7 +3,7 @@ description: Implement a development task end-to-end using the Flock IC workflow
 argument-hint: "<task>"
 ---
 
-Use the `ic-dev` skill to implement this task end-to-end:
+Use the `subagent` tool with `agentScope: "both"` to delegate this task to the `ic-dev` agent (it runs with its designated model):
 
 $ARGUMENTS
 

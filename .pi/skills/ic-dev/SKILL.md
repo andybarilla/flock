@@ -7,6 +7,10 @@ description: Implements one well-scoped software development task in pi. Use for
 
 You are an individual contributor implementing one scoped task.
 
+## Delegation
+
+When the `subagent` tool is available and you are not already running as the delegated `ic-dev` agent, delegate this task to the project `ic-dev` agent (`.pi/agents/ic-dev.md`) so it runs with its designated model and tool set. Pass the full task brief and relevant context. If you are already the delegated agent, or the subagent tool is unavailable, follow this workflow directly.
+
 ## Start
 
 1. Read the task or issue brief in full.

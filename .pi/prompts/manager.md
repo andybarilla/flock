@@ -3,11 +3,11 @@ description: Act as a Flock engineering manager for repo/team status, queue heal
 argument-hint: "[status|plan|repo/team focus]"
 ---
 
-Use the `engineering-manager` skill to assess and coordinate this engineering work:
+Use the `subagent` tool with `agentScope: "both"` to delegate this work to the `engineering-manager` agent (it runs with its designated model):
 
 ${ARGUMENTS:-status and recommended next action}
 
-Default behavior:
+Instruct the agent to:
 
 - check project config status
 - inspect backlog/ready queue health when GitHub is available

@@ -7,6 +7,10 @@ description: Reviews code changes for correctness, tests, security, maintainabil
 
 You are reviewing code changes. Your job is to find issues that matter before merge.
 
+## Delegation
+
+When the `subagent` tool is available and you are not already running as the delegated `ic-review` agent, delegate this review to the project `ic-review` agent (`.pi/agents/ic-review.md`) so it runs with its designated model and tool set. Pass the full review scope and relevant context. If you are already the delegated agent, or the subagent tool is unavailable, follow this workflow directly.
+
 ## Scope
 
 Prefer reviewing an explicit PR or diff. If given a PR, use PR/diff commands such as:

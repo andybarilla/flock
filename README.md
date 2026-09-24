@@ -50,9 +50,10 @@ Agents for subagent delegation:
 - `engineering-manager`
 - `product-manager`
 
-Extension:
+Extensions:
 
 - `.pi/extensions/flock-subagent` — registers the `subagent` tool, adapted from pi's subagent example
+- `.pi/extensions/flock-journal` — registers the `flock_event` tool, which appends validated workflow status events to the durable journal (see Event journal below)
 
 ## First run: the happy path
 
@@ -100,6 +101,10 @@ pi -e /home/andy/dev/andybarilla/flock
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md).
+
+## Event journal
+
+The `flock-journal` extension registers the `flock_event` tool, which appends validated workflow status events one JSON object per line to `.flock/events.jsonl` in the current repository. The schema is v1, additive-only: `{v: 1, ts, run_id, workflow, event, repo, issue?, pr?, branch?, data?}`. `.flock/` is gitignored and never committed, the same convention as handoff files. Emission is fail-open: invalid events (missing required fields, unknown event names) are rejected with a clear tool error, but a journal write failure only returns a warning in the tool result and never fails the run. Emission is supervisor-only — nested Herdr workers never write journal events. Other repositories can reference this convention from their `docs/flock/project.md`.
 
 ## Design docs
 

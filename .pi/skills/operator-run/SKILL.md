@@ -26,6 +26,23 @@ Parse user arguments for:
 
 If parsing is ambiguous, ask before any mutation.
 
+## Event journal
+
+The supervisor records workflow status events with the `flock_event` tool, which appends one JSON event per line to `.flock/events.jsonl` (schema v1; `.flock/` is gitignored and never committed, the same convention as handoff files). Generate one `run_id` per operator run (for example `operator-run-<utc-start-timestamp>`) and reuse it for every event in the run; `repo` is the repository's owner/name.
+
+Emission is supervisor-only: nested Herdr workers never write journal events — their worktrees are removed after merge. Emission is observational only: a journal failure (a warning result from the tool) never changes workflow behavior, safety stops, approval policy, merge policy, or retry policy — note the warning in the run log and continue.
+
+Emission points:
+
+- run start (first decision pass, section 2): one `run_started` per run with `data: {mode: "<dry-run|one-shot|loop>"}`; a run that opens with a resume cycle emits it the same way
+- issue dispatched (section 5a): `issue_dispatched` with `issue`, `branch`, and the pane/workspace/worktree IDs in `data`
+- PR verified/opened (section 5a PR verification leg): `pr_opened` with `issue`, `pr`, `branch`
+- gate re-run (section 2 resume gate re-run, section 5a/5b validation legs): `gate_result` with `data: {passed: true|false}`
+- review verdict (section 2 resume review, section 5a/5b review legs): `review_verdict` with `data: {verdict: "clean"|"blocking"}`
+- rework dispatched (section 5b): `rework_dispatched` with `issue` and `pr`
+- merge step (section 6): `merge_verified`, `issue_closed`, and `worktree_cleaned` with `issue`, `pr`, and — for `worktree_cleaned` — the workspace/worktree IDs in `data`
+- run stop (sections 7/8): exactly one terminal `run_stopped` with `data: {reason: "<stop reason>"}` using the exact stop reason string the run log's `Stop reason:` field uses (for example "PR not green" or "review blocking")
+
 ## 1. Preflight and project policy
 
 Inspect the repository and tracker before every cycle:
@@ -98,7 +115,7 @@ Recommended action priority:
 
 Parked-register guard: while the parked PR register (section 7) is non-empty, priorities 3 and 5 do not apply — no generic resume and no new issue work. Only an eligible parked-PR resume (priority 4), grooming, triage, or stop are allowed until the register is empty.
 
-Resume criteria — an open PR is a resume target only when all of these are observed: its head branch matches the configured issue branch pattern, its author is the authenticated account (`gh api user --jq .login`), its linked issue is open, it carries the `flock-operator-run` provenance marker comment authored by the authenticated account (observed via `gh pr view <number> --json comments`, filtered to the authenticated login — a marker comment from any other author is meaningless and does not qualify the PR), and project config allows conditional merge. Branch shape and authorship alone never qualify a PR: the authenticated account is usually the maintainer's own, so without the self-authored provenance marker the PR stays human-merged. On resume, first re-establish validation and review evidence in the resuming run: re-run the configured gate command against the PR head (in the Herdr worktree if it still exists — first confirming `git -C <worktree> rev-parse HEAD` matches the PR head sha from `gh pr view <number> --json headRefOid`, stopping as unexpected branch state on mismatch — otherwise in a fresh checkout of the PR branch) and stop on failure — the marker certifies only the verification legs observed when it was posted, which may predate validation — then dispatch the `pr-review` workflow for the PR; a fresh non-blocking verdict re-establishes review evidence, and a blocking verdict stops the run. Then run the section 6 merge step; do not redispatch the issue. A PR failing any criterion is not a resume target: never merge it, and ask a human when ownership is ambiguous. Within a loop run, the parked PR register (section 7) detects rework via the handoff file's `Rework: complete` marker plus an advanced head sha; across runs, the criteria above are sufficient on their own — the gate re-run and fresh review re-establish evidence regardless of how the fixes arrived. A resume cycle never gets a section 5b rework pass: a blocking verdict on resume stops the run.
+Resume criteria — an open PR is a resume target only when all of these are observed: its head branch matches the configured issue branch pattern, its author is the authenticated account (`gh api user --jq .login`), its linked issue is open, it carries the `flock-operator-run` provenance marker comment authored by the authenticated account (observed via `gh pr view <number> --json comments`, filtered to the authenticated login — a marker comment from any other author is meaningless and does not qualify the PR), and project config allows conditional merge. Branch shape and authorship alone never qualify a PR: the authenticated account is usually the maintainer's own, so without the self-authored provenance marker the PR stays human-merged. On resume, first re-establish validation and review evidence in the resuming run: re-run the configured gate command against the PR head (in the Herdr worktree if it still exists — first confirming `git -C <worktree> rev-parse HEAD` matches the PR head sha from `gh pr view <number> --json headRefOid`, stopping as unexpected branch state on mismatch — otherwise in a fresh checkout of the PR branch) and stop on failure — the marker certifies only the verification legs observed when it was posted, which may predate validation — then dispatch the `pr-review` workflow for the PR; a fresh non-blocking verdict re-establishes review evidence, and a blocking verdict stops the run. Then run the section 6 merge step; do not redispatch the issue. A PR failing any criterion is not a resume target: never merge it, and ask a human when ownership is ambiguous. Within a loop run, the parked PR register (section 7) detects rework via the handoff file's `Rework: complete` marker plus an advanced head sha; across runs, the criteria above are sufficient on their own — the gate re-run and fresh review re-establish evidence regardless of how the fixes arrived. A resume cycle never gets a section 5b rework pass: a blocking verdict on resume stops the run. Journal events on resume: the run's single `run_started` (Event journal) covers the resume cycle start; record the gate re-run as `gate_result` and the fresh review verdict as `review_verdict`.
 
 This priority is a routing default only. Stop and ask if the safest action is ambiguous or issue scope is unclear.
 
@@ -244,6 +261,8 @@ The supervisor never records worker claims from the handoff alone. Before record
 
 A claim that fails re-verification stops the run with `worker claim mismatch`, reporting the observed divergence. Only after all checks pass does the cycle count as a completed issue workflow: run the merge step when applicable, and evaluate the loop continuation gate.
 
+Journal events for the dispatch cycle: emit `issue_dispatched` when the worker brief is submitted (dispatch sequence step 3), with `issue`, `branch`, and the pane, workspace, and worktree IDs in `data`. In the independent verification legs, emit `pr_opened` when the open PR is verified, `gate_result` after the worktree gate re-run, and `review_verdict` after the supervisor's fresh `pr-review`.
+
 ## 5b. Review rework pass (optional, Herdr dispatch only)
 
 When the supervisor's fresh `pr-review` from the section 5a review leg returns `BLOCKING`, evaluate exactly one bounded rework pass instead of stopping immediately — but only when all of these hold:
@@ -259,6 +278,8 @@ When all hold, send the rework prompt to the existing worker:
 ```bash
 herdr agent prompt issue-<n> "<rework brief>" --wait --timeout <remaining-budget-ms>
 ```
+
+Emit a `rework_dispatched` journal event with `issue` and `pr` when the rework prompt is sent.
 
 The rework brief must include the review findings verbatim and instruct the worker to address each finding on the existing issue branch in the existing worktree, push to update the existing PR (never a new branch or PR), re-run the full gate, and rewrite the handoff file with a `Rework: complete` marker and a findings-addressed list. Never start a second agent and never answer nested approval dialogs; interpret the outcome with the section 5a step 4 rules (a BLOCKED rework handoff stops with `worker blocked`).
 
@@ -336,6 +357,8 @@ After a verified merge:
 
 If the sync fails or the merge commit is absent, stop with `merge verification failed` and report the merged PR with the divergence. Claim tracker completion in the run log only from the observed close command output.
 
+Journal events for the merge step: emit `merge_verified` after the PR is observed `MERGED`, `issue_closed` after the close command output is observed, and `worktree_cleaned` with the workspace and worktree IDs in `data` after a successful run-created worktree removal.
+
 ## 7. Loop continuation gate
 
 When `--loop` is set, repeat the one-cycle process only while all conditions remain safe:
@@ -372,6 +395,8 @@ Do not continue after a failed or blocked issue in v1 unless project policy expl
 Return a stage-by-stage summary for one-shot mode, and a Final run log for loop mode. Mark each stage as succeeded, skipped, or failed. Failed stages must include a clear stop reason. Do not claim validation, review, tracker changes, or tracker completion unless command output from the underlying workflow was observed. A resume cycle (`action=resume`) counts toward max cycles and max issues like a work cycle.
 
 Itemize leftover Herdr state as follow-up items: every run-created worker worktree or pane still in place at run end, whatever stopped its cycle — failed, blocked, timed-out, or stalled workers left in place for human inspection, merge-stopped cycles whose worktrees and panes were intentionally preserved (`PR not green`, `checks failing`, `merge conflict`, `unexpected PR state`, `review blocking`, `merge failed`, `merge verification failed`), and post-merge worktree removals that failed or were skipped for unexpected worktree state — each with agent name, workspace ID, worktree path, and stop reason or observed error. Stale worktrees or workspaces from previous runs are report-only follow-up items — the operator never removes them. When Herdr dispatch was active in this run, enumerate previous-run leftovers before composing this log with `herdr worktree list` and record any workspace not created in this run as a report-only follow-up item.
+
+Emit exactly one terminal `run_stopped` journal event with `data: {reason: "<stop reason>"}` using the exact stop reason string the `Stop reason:` field below uses (for example "PR not green" or "review blocking").
 
 ```md
 Mode: <dry-run|one-shot|loop>

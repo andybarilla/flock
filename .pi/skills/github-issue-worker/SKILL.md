@@ -46,6 +46,16 @@ The supervisor may send one follow-up prompt containing blocking review findings
 - Rewrite the handoff file with the full step 11 format plus a `Rework: complete` line and a `Findings addressed:` list mapping each finding to its fix (or a clear reason it was not addressed). Set the handoff's review fields to `not run — supervisor review pending`; the supervisor's fresh review is the only review evidence after rework. Return the updated handoff in the session as well, and never commit the handoff file.
 - If a finding shows the issue scope was wrong, or a finding cannot be addressed safely, write the BLOCKED handoff instead (with a `Rework: blocked` line and the reason) and stop; do not wait for human input.
 
+## Event journal
+
+When running in your own session (not Herdr-dispatched), record workflow status events with the `flock_event` tool, which appends one JSON event per line to `.flock/events.jsonl` (schema v1; `.flock/` is gitignored and never committed). Use one `run_id` per worker session (for example `issue-worker-<issue-number>-<utc-start-timestamp>`) and emit:
+
+- `run_started` with workflow `github-issue-worker` and the issue number, at session start
+- `pr_opened` with `issue`, `pr`, and `branch` when a PR is opened (step 8)
+- exactly one terminal `run_stopped`: `data: {reason: "completed"}` on success, or `data: {reason: "<blocked reason>"}` on the blocked path (step 3/11)
+
+Issue close and merge events are the supervisor's, not the worker's. Herdr-dispatched nested workers do NOT emit journal events: the supervisor owns the journal for those runs and the nested worktree is removed after merge. Emission is observational only: a journal failure (a warning result from the tool) never changes workflow behavior — note it and continue.
+
 ## 1. Preflight
 
 Confirm this is a Git repository with a GitHub remote:

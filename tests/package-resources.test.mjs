@@ -34,17 +34,12 @@ const expectedPromptNames = [
 ];
 
 const expectedPromptSkillRoutes = new Map([
-	["dev", "ic-dev"],
-	["review", "ic-review"],
 	["issue", "github-issue-worker"],
 	["pr-review", "pr-review"],
 	["work", "issue-loop"],
 	["groom", "groom"],
 	["flock-status", "flock-status"],
-	["manager", "engineering-manager"],
 	["operate", "operator-run"],
-	["lead", "tech-lead"],
-	["product", "product-manager"],
 	["project-config", "project-config"],
 	["triage", "triage"],
 ]);
@@ -150,14 +145,32 @@ test("prompt templates preserve Flock routing contracts", () => {
 		);
 	}
 
+	// Prompts that delegate to a named subagent (designated model) instead of
+	// routing to a skill inline.
+	const expectedPromptAgentRoutes = new Map([
+		["dev", "ic-dev"],
+		["review", "ic-review"],
+		["lead", "tech-lead"],
+		["manager", "engineering-manager"],
+		["product", "product-manager"],
+	]);
 	for (const name of ["implement", "implement-and-review", "scout-and-plan"]) {
 		const content = prompts.get(name).content;
 		assert.match(content, /Use the `subagent` tool/);
 		assert.match(content, /agentScope: "both"/);
 	}
+	for (const [name, agentName] of expectedPromptAgentRoutes) {
+		const content = prompts.get(name).content;
+		assert.match(content, /Use the `subagent` tool/);
+		assert.match(content, /agentScope: "both"/);
+		assert.ok(
+			content.includes(`\`${agentName}\` agent`),
+			`${name} should delegate to the ${agentName} agent`,
+		);
+	}
 
 	const expanded = expandPromptTemplate("/review please check this change", templates);
-	assert.match(expanded, /Use the `ic-review` skill/);
+	assert.match(expanded, /delegate this review to the `ic-review` agent/);
 	assert.match(expanded, /please check this change/);
 });
 

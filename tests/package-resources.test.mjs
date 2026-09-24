@@ -120,6 +120,10 @@ test("Flock package resources load through Pi resource loader", async () => {
 		extensions.extensions.some((extension) => extension.path.includes("flock-subagent")),
 		"expected flock-subagent extension to be discoverable",
 	);
+	assert.ok(
+		extensions.extensions.some((extension) => extension.path.includes("flock-journal")),
+		"expected flock-journal extension to be discoverable",
+	);
 });
 
 test("prompt templates preserve Flock routing contracts", () => {

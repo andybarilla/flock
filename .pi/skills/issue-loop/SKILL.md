@@ -24,6 +24,7 @@ Before applying defaults, check for `docs/flock/project.md`. If present, read it
 Parse user arguments for:
 
 - `--label <label>`
+- `--focus <label>`: scope ready-issue selection to issues that also carry `<label>`; the focus filter composes with `--label`, it does not replace it
 - `--limit <n>`
 - `--yes`
 - explicit issue numbers, if provided
@@ -53,11 +54,21 @@ Otherwise list open issues with the selected label:
 gh issue list --state open --label <label> --json number,title,labels,updatedAt,url --limit 50
 ```
 
-If no issues are found, report that the queue is empty for the selected label and stop.
+When `--focus <label>` is present, scope candidates to issues carrying both the ready label and the focus label, using exactly:
+
+```bash
+gh issue list --state open --label <label> --label <focus> --json number,title,labels,updatedAt,url --limit 50
+```
+
+Substitute the active ready label (the `--label` value after CLI/config defaults) for `<label>` and the `--focus` value for `<focus>`; the focus filter composes with `--label`, it does not replace it.
+
+If no issues are found, report that the queue is empty for the selected label and stop. With `--focus`, an empty focus set — no ready issues carry the focus label, or the label does not exist — stops with reason `focus queue empty`; never fall back to the general ready queue.
 
 ## 3. Select next issue
 
 Pick the first candidate not already attempted in this run.
+
+When `--focus` is combined with explicit issue numbers, the explicit numbers win; warn the user when an explicit number is outside the focus set (does not carry the focus label).
 
 Before starting it, read the issue and comments enough to show the user what will be worked:
 
@@ -141,6 +152,7 @@ Stop when:
 
 - processed `--limit` issues
 - candidate queue is empty
+- focus queue is empty (`--focus` set and no ready issues carry the focus label)
 - user declined confirmation
 - issue worker blocked/failed
 - worktree becomes dirty in an unexpected way
@@ -162,6 +174,7 @@ Return a final stage-by-stage summary. Mark every stage as succeeded, skipped, o
 
 ```md
 Processed: <count>
+Focus: <focus label and matched issue numbers, or "none">
 Stopped because: <reason>
 Issue: #<number or "none selected">
 Branch: <branch name when available, or "not created">

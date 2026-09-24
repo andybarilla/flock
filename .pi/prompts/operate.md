@@ -1,6 +1,6 @@
 ---
 description: Run a bounded Flock operator cycle or trusted multi-step loop
-argument-hint: "[--dry-run|--plan] [--loop] [--yes] [--max-cycles <n>] [--max-issues <n>] [--max-groom-batches <n>] [--max-triage-issues <n>] [--max-runtime <duration>]"
+argument-hint: "[--dry-run|--plan] [--loop] [--yes] [--max-cycles <n>] [--max-issues <n>] [--max-groom-batches <n>] [--max-triage-issues <n>] [--max-runtime <duration>] [--label <label>] [--focus <label>]"
 ---
 
 Use the `operator-run` skill to run a bounded Flock operator decision cycle or trusted multi-step loop for this repository.
@@ -20,6 +20,7 @@ Default behavior:
 - refuse mutation when project config is missing or the Operator Approval Policy does not explicitly allow the selected approval category
 - execute one delegated action per cycle; one-shot stops after the first cycle, and loop mode repeats safe cycles only until explicit limits or a stop condition is reached
 - prefer dispatching one ready issue through the existing `issue-loop` workflow when issue selection is allowed and ready work exists
+- `--focus <label>`: scope the ready-issue decision pass to issues carrying both the ready label and the focus label, composing with `--label` (not replacing it); show the focus set (label + matched issues) in the dry-run output and record it in the final run log; an empty or nonexistent focus set stops cleanly with stop reason `focus queue empty` and never falls back to the general ready queue; focus has no effect on triage, groom, review, or merge cycles, which stay global
 - otherwise consider one bounded triage action, one bounded grooming action, or one PR review only when policy and limits allow
 - preserve validation, review, branch safety, PR, and tracker completion behavior from the delegated workflow
 - merge only under an explicit conditional Merge approval policy in project config: squash merge of green PRs opened by the operator in the current run, or meeting the documented resume criteria (self-authored provenance marker, fresh non-blocking review), verified before issue close; all other PRs remain human-merged

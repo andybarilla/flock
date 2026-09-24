@@ -22,6 +22,7 @@ Parse user arguments for:
 - `--max-triage-issues <n>`: max triage issues in this run
 - `--max-runtime <duration>`: max wall-clock runtime, such as `10m`; require an explicit value for loop mode unless project config supplies one
 - `--label <label>`: ready issue label, default `ready-for-agent`
+- `--focus <label>`: scope ready-issue selection to issues that also carry `<label>`; the focus filter composes with `--label`, it does not replace it. Focus has no effect on triage, groom, review, or merge cycles — those stay global. Herdr worker dispatch (section 5a) is unchanged: selection happens upstream, so worker briefs need no focus changes
 
 If parsing is ambiguous, ask before any mutation.
 
@@ -59,6 +60,14 @@ gh pr list --state open --json number,title,url,headRefName,baseRefName,reviewDe
 
 If configured labels differ from defaults, use the labels from `docs/flock/project.md`.
 
+When `--focus <label>` is present, the ready-issue listing must filter to issues carrying both the ready label and the focus label, using exactly:
+
+```bash
+gh issue list --state open --label <label> --label <focus> --json number,title,labels,updatedAt,url --limit 50
+```
+
+Substitute the active ready label (the `--label` value after CLI/config defaults) for `<label>` and the `--focus` value for `<focus>`; the focus filter composes with `--label`, it does not replace it. If the focus set is empty — no ready issues carry the focus label, or the label does not exist — stop with reason `focus queue empty`; nothing is dispatched and the operator never falls back to the general ready queue. Focus does not affect the triage, backlog, or PR listings, and triage, groom, review, and merge cycles stay global.
+
 Recommended action priority:
 
 1. stop on dirty worktree, auth failure, missing required commands, or unexpected branch state
@@ -92,6 +101,7 @@ Queues:
 - Ready: <count and first issue when available>
 - Triage: <count and first issue when available>
 - Backlog/grooming: <short observed state>
+Focus: <focus label and matched issue numbers, or "none">
 PRs/review: <short observed state>
 Recommended action: <groom|work|review PR|triage|stop|ask human>
 Why this action: <one or two sentences>
@@ -99,7 +109,7 @@ Alternatives not selected: <brief bullets or "none">
 Safety notes: <dirty tree, missing config, policy blockers, or "none">
 Next command: <suggested Flock command, or "none">
 Would mutate: no
-Stop reason: dry-run plan completed
+Stop reason: <dry-run plan completed|focus queue empty> — use `focus queue empty` when `--focus` is set and the focused ready set is empty
 ```
 
 Do not claim validation, review, tracker changes, or completion in dry-run mode.
@@ -134,6 +144,13 @@ Examples:
 ```md
 Use the `issue-loop` skill to work ready GitHub issues from this repository.
 Arguments: --label <label> --limit 1 --yes
+```
+
+When `--focus <focus>` is present, pass it through so the delegated loop selects from the same focused set the decision pass used:
+
+```md
+Use the `issue-loop` skill to work ready GitHub issues from this repository.
+Arguments: --label <label> --focus <focus> --limit 1 --yes
 ```
 
 ```md
@@ -343,6 +360,7 @@ Repository: <owner/name>
 Project config: <found/missing and approval policy summary>
 Herdr dispatch: <enabled|disabled: missing HERDR_ENV=1 or missing config Herdr worktree pattern>
 Limits: <max cycles/issues/grooming/triage/runtime and observed counters>
+Focus: <focus label and matched issue numbers, or "none">
 Chosen action: <work|triage|groom|review|stop|ask human>
 Delegated workflow: <issue-loop|triage|groom|pr-review|ic-review|none>
 Issue: #<number when available, or "none selected">
@@ -369,7 +387,7 @@ Workflow summary:
 - Rework: <succeeded|skipped|failed> — <dispatched outcome, or why not applicable>
 - Merge step: <succeeded|skipped|failed> — <observed merge/verification result, stop reason, or not run>
 - Tracker completion: <succeeded|skipped|failed> — <observed delegated result or not run>
-Stop reason: <completed one-shot action|dry-run plan completed|queue empty|blocked|failed|review blocking|review cannot run|PR not green|checks failing|merge conflict|unexpected PR state|merge failed|merge verification failed|worker blocked|worker timeout|worker not ready|worker stalled|worker handoff missing|worker claim mismatch|worktree create failed|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
+Stop reason: <completed one-shot action|dry-run plan completed|queue empty|focus queue empty|blocked|failed|review blocking|review cannot run|PR not green|checks failing|merge conflict|unexpected PR state|merge failed|merge verification failed|worker blocked|worker timeout|worker not ready|worker stalled|worker handoff missing|worker claim mismatch|worktree create failed|dirty worktree|unexpected branch|limit reached|human confirmation required|no safe action>
 Next recommended human action: <merge/review/fix/configure/run suggested command/no action>
 ```
 

@@ -109,7 +109,7 @@ Alternatives not selected: <brief bullets or "none">
 Safety notes: <dirty tree, missing config, policy blockers, or "none">
 Next command: <suggested Flock command, or "none">
 Would mutate: no
-Stop reason: dry-run plan completed
+Stop reason: <dry-run plan completed|focus queue empty> — use `focus queue empty` when `--focus` is set and the focused ready set is empty
 ```
 
 Do not claim validation, review, tracker changes, or completion in dry-run mode.

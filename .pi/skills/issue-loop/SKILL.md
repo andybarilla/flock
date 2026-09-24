@@ -76,7 +76,7 @@ When the `--focus` value is numeric (`--focus <issue-number>`), it names an epic
   The endpoint returns a JSON array of the issues blocking `<n>`. Issue-body "Blocked by" text is human documentation only and is never parsed.
 - Discovery: list open issues carrying the ready label (limit 50), then for each candidate walk its blocked-by links transitively with the query above, to a maximum depth of 10 levels; the candidate joins the focus set when the walk reaches the epic issue number. Add the epic itself when it is open and ready.
 - Missing data: an empty relationships array means no dependency info is recorded for that issue — treat the issue as having no known blockers and never infer dependencies from any other source.
-- API error: when the dependency query fails, stop and report the failing command and observed error; never guess dependency order.
+- API error: when the dependency query fails, stop with reason `focus dependency query failed` and report the failing command and observed error; never guess dependency order.
 - Ordering: a focus-set member is dispatchable only when every issue in its blocked-by list is closed. When a member has an open blocker, skip it and record an explicit `blocked by #N` report line naming the open blocker; never dispatch a member before its open blocker.
 - Re-evaluation: re-run the dependency queries on every selection pass, so a blocker closed or merged during the run makes its dependents eligible in the next pass.
 - An empty epic focus set — the epic is not open and ready and no ready issue's blocked-by closure includes it — stops with reason `focus queue empty`; never fall back to the general ready queue.
@@ -87,7 +87,9 @@ Pick the first candidate not already attempted in this run.
 
 In epic mode (numeric `--focus`), pick the first dispatchable focus-set member in dependency order — every issue in its blocked-by list closed — not already attempted in this run. Skip still-blocked members with an explicit `blocked by #N` report line naming the open blocker, and re-run the dependency queries before each selection so newly unblocked members become eligible.
 
-When `--focus` is combined with explicit issue numbers, the explicit numbers win; warn the user when an explicit number is outside the focus set (does not carry the focus label or, in epic mode, is not a member of the epic's dependency chain).
+When `--focus` carries a label value and is combined with explicit issue numbers, the explicit numbers win; warn the user when an explicit number is outside the focus set (does not carry the focus label).
+
+In epic mode (numeric `--focus`), explicit issue numbers never bypass dependency ordering: still build the focus set and enforce dispatchability for each explicit number. When an explicit number is not a member of the epic's dependency chain, stop and report that it is outside the focus set. When an explicit number has an open blocker, do not dispatch it; record an explicit `blocked by #N` line naming the open blocker and stop after any dispatchable explicit numbers are worked.
 
 Before starting it, read the issue and comments enough to show the user what will be worked:
 
@@ -172,7 +174,7 @@ Stop when:
 - processed `--limit` issues
 - candidate queue is empty
 - focus queue is empty (`--focus` set and no ready issues carry the focus label; in epic mode, the epic is not open and ready and no ready issue's blocked-by closure includes it)
-- the epic-mode dependency query fails (API error) — stop and report rather than guessing order
+- the epic-mode dependency query fails (API error) — stop with reason `focus dependency query failed`; never guess order
 - user declined confirmation
 - issue worker blocked/failed
 - worktree becomes dirty in an unexpected way

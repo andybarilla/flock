@@ -19,7 +19,7 @@
  * never throws or fails the caller's run.
  */
 
-import { appendFileSync, lstatSync, mkdirSync } from "node:fs";
+import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, writeSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -169,25 +169,41 @@ export function buildJournalEvent(params: ValidatedEventParams, ts: string = new
 export function appendJournalEvent(cwd: string, event: FlockJournalEvent): AppendResult {
 	const journalPath = journalPathFor(cwd);
 	const journalDir = dirname(journalPath);
+	const refuse = (why: string): AppendResult => ({
+		ok: false,
+		path: journalPath,
+		warning: `flock_event refused to write the journal at ${journalPath}: ${why}. Event not recorded; the run continues unchanged (fail-open).`,
+	});
 	try {
-		// Path safety: a symlinked `.flock/` or `events.jsonl` would redirect the
-		// append outside the repository, so refuse and fail open instead of
-		// writing. Anything other than "does not exist" is a real error.
-		for (const candidate of [journalDir, journalPath]) {
-			try {
-				if (lstatSync(candidate).isSymbolicLink()) {
-					return {
-						ok: false,
-						path: journalPath,
-						warning: `flock_event refused to write the journal at ${journalPath}: ${candidate} is a symlink, which could redirect the write outside the repository. Event not recorded; the run continues unchanged (fail-open).`,
-					};
-				}
-			} catch (err) {
-				if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+		// Path safety: writes must land only in this repository's own journal.
+		// A symlinked `.flock/` is refused up front; the file itself is opened
+		// with O_NOFOLLOW (fails on any symlink, race-safe at open time) and
+		// then fstat'd on the open descriptor: it must be a regular file with a
+		// single link, so a hard link to a file outside the repo is refused
+		// before anything is written. Anything other than "does not exist" from
+		// the lstat is a real error.
+		try {
+			if (lstatSync(journalDir).isSymbolicLink()) {
+				return refuse(`${journalDir} is a symlink, which could redirect the write outside the repository`);
 			}
+		} catch (err) {
+			if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
 		}
 		mkdirSync(journalDir, { recursive: true });
-		appendFileSync(journalPath, `${JSON.stringify(event)}\n`, "utf8");
+		const fd = openSync(journalPath, constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | constants.O_NOFOLLOW);
+		try {
+			const stat = fstatSync(fd);
+			if (!stat.isFile() || stat.nlink !== 1) {
+				return refuse(
+					stat.nlink !== 1
+						? `${journalPath} has ${stat.nlink} hard links, so appending could modify a file outside the repository`
+					: `${journalPath} is not a regular file`,
+				);
+			}
+			writeSync(fd, `${JSON.stringify(event)}\n`);
+		} finally {
+			closeSync(fd);
+		}
 		return { ok: true, path: journalPath };
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);

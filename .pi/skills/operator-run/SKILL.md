@@ -30,11 +30,11 @@ If parsing is ambiguous, ask before any mutation.
 
 The supervisor records workflow status events with the `flock_event` tool, which appends one JSON event per line to `.flock/events.jsonl` (schema v1; `.flock/` is gitignored and never committed, the same convention as handoff files). Generate one `run_id` per operator run (for example `operator-run-<utc-start-timestamp>`) and reuse it for every event in the run; `repo` is the repository's owner/name.
 
-Emission is supervisor-only: nested Herdr workers never write journal events — their worktrees are removed after merge. Emission is observational only: a journal failure (a warning result from the tool) never changes workflow behavior, safety stops, approval policy, merge policy, or retry policy — note the warning in the run log and continue.
+Emission is supervisor-only: nested Herdr workers never write journal events — their worktrees are removed after merge. Read-only modes never emit: `--dry-run` / `--plan` runs write no journal events at all, because those modes must not mutate and the journal is a filesystem write. Emission is observational only: a journal failure (a warning result from the tool) never changes workflow behavior, safety stops, approval policy, merge policy, or retry policy — note the warning in the run log and continue.
 
 Emission points:
 
-- run start (first decision pass, section 2): one `run_started` per run with `data: {mode: "<dry-run|one-shot|loop>"}`; a run that opens with a resume cycle emits it the same way
+- run start (first decision pass, section 2): one `run_started` per mutating run with `data: {mode: "<one-shot|loop>"}`; a run that opens with a resume cycle emits it the same way
 - issue dispatched (section 5a): `issue_dispatched` with `issue`, `branch`, and the pane/workspace/worktree IDs in `data`
 - PR verified/opened (section 5a PR verification leg): `pr_opened` with `issue`, `pr`, `branch`
 - gate re-run (section 2 resume gate re-run, section 5a/5b validation legs): `gate_result` with `data: {passed: true|false}`
@@ -396,7 +396,7 @@ Return a stage-by-stage summary for one-shot mode, and a Final run log for loop 
 
 Itemize leftover Herdr state as follow-up items: every run-created worker worktree or pane still in place at run end, whatever stopped its cycle — failed, blocked, timed-out, or stalled workers left in place for human inspection, merge-stopped cycles whose worktrees and panes were intentionally preserved (`PR not green`, `checks failing`, `merge conflict`, `unexpected PR state`, `review blocking`, `merge failed`, `merge verification failed`), and post-merge worktree removals that failed or were skipped for unexpected worktree state — each with agent name, workspace ID, worktree path, and stop reason or observed error. Stale worktrees or workspaces from previous runs are report-only follow-up items — the operator never removes them. When Herdr dispatch was active in this run, enumerate previous-run leftovers before composing this log with `herdr worktree list` and record any workspace not created in this run as a report-only follow-up item.
 
-Emit exactly one terminal `run_stopped` journal event with `data: {reason: "<stop reason>"}` using the exact stop reason string the `Stop reason:` field below uses (for example "PR not green" or "review blocking").
+Emit exactly one terminal `run_stopped` journal event (mutating runs only — read-only modes emit nothing, see Event journal) with `data: {reason: "<stop reason>"}` using the exact stop reason string the `Stop reason:` field below uses (for example "PR not green" or "review blocking").
 
 ```md
 Mode: <dry-run|one-shot|loop>

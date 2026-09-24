@@ -118,7 +118,7 @@ Queues:
 - Ready: <count and first issue when available>
 - Triage: <count and first issue when available>
 - Backlog/grooming: <short observed state>
-Focus: <focus label and matched issue numbers; or, in epic mode, the epic issue number, the chain members, and the dispatchable/blocked breakdown with each skip's `blocked by #N` line; or "none">
+Focus: <focus label and matched issue numbers; or, in epic mode, the epic issue number, the chain members, and the dispatchable/blocked/done breakdown with each skip's `blocked by #N` line and each closed chain member itemized as `done #N`; or "none">
 PRs/review: <short observed state>
 Recommended action: <groom|work|review PR|triage|stop|ask human>
 Why this action: <one or two sentences>
@@ -379,7 +379,7 @@ Repository: <owner/name>
 Project config: <found/missing and approval policy summary>
 Herdr dispatch: <enabled|disabled: missing HERDR_ENV=1 or missing config Herdr worktree pattern>
 Limits: <max cycles/issues/grooming/triage/runtime and observed counters>
-Focus: <focus label and matched issue numbers; or, in epic mode, the epic issue number, the chain members, and a worked/skipped/blocked breakdown with each skip's `blocked by #N` line — plus `Focus chain blocked at PR #<n> (issue #<m>, review blocking)` when a focus-chain PR is parked; or "none">
+Focus: <focus label and matched issue numbers; or, in epic mode, the epic issue number, the chain members, and a worked/skipped/blocked/done breakdown with each skip's `blocked by #N` line and each closed chain member itemized as `done #N` (dispatch candidates remain open ready issues only; closed members are retained for done reporting) — plus `Focus chain blocked at PR #<n> (issue #<m>, review blocking)` when a focus-chain PR is parked; or "none">
 Chosen action: <work|triage|groom|review|stop|ask human>
 Delegated workflow: <issue-loop|triage|groom|pr-review|ic-review|none>
 Issue: #<number when available, or "none selected">

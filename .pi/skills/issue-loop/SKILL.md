@@ -196,7 +196,7 @@ Return a final stage-by-stage summary. Mark every stage as succeeded, skipped, o
 
 ```md
 Processed: <count>
-Focus: <focus label and matched issue numbers; or, in epic mode, the epic issue number, the chain members, and a worked/skipped/blocked breakdown with each skip's `blocked by #N` line; or "none">
+Focus: <focus label and matched issue numbers; or, in epic mode, the epic issue number, the chain members, and a worked/skipped/blocked/done breakdown with each skip's `blocked by #N` line and each closed chain member itemized as `done #N` (dispatch candidates remain open ready issues only; closed members are retained for done reporting); or "none">
 Stopped because: <reason>
 Issue: #<number or "none selected">
 Branch: <branch name when available, or "not created">

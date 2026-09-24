@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -120,4 +120,38 @@ test("flock_event journal write failure is fail-open with a warning", () => {
 	assert.equal(typeof result.warning, "string");
 	assert.match(result.warning, /fail-open/);
 	assert.equal(statSync(join(cwd, ".flock")).isFile(), true, "no journal directory should appear");
+});
+
+test("flock_event refuses a symlinked journal file and does not write through it", () => {
+	const cwd = makeCwd();
+	mkdirSync(join(cwd, ".flock"));
+	const outside = join(cwd, "outside.jsonl");
+	writeFileSync(outside, "");
+	symlinkSync(outside, join(cwd, ".flock", "events.jsonl"));
+
+	const event = buildJournalEvent(validateEventParams(validParams()).params);
+	let result;
+	assert.doesNotThrow(() => {
+		result = appendJournalEvent(cwd, event);
+	});
+	assert.equal(result.ok, false);
+	assert.match(result.warning, /symlink/);
+	assert.match(result.warning, /fail-open/);
+	assert.equal(readFileSync(outside, "utf8"), "", "nothing may be written through the symlink");
+});
+
+test("flock_event refuses a symlinked .flock directory", () => {
+	const cwd = makeCwd();
+	const elsewhere = mkdtempSync(join(tmpdir(), "flock-journal-elsewhere-"));
+	symlinkSync(elsewhere, join(cwd, ".flock"));
+
+	const event = buildJournalEvent(validateEventParams(validParams()).params);
+	const result = appendJournalEvent(cwd, event);
+	assert.equal(result.ok, false);
+	assert.match(result.warning, /symlink/);
+	assert.equal(
+		statSync(join(elsewhere, "events.jsonl"), { throwIfNoEntry: false }),
+		undefined,
+		"no journal may appear in the symlink target",
+	);
 });

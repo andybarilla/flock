@@ -2,7 +2,7 @@
 name: engineering-manager
 description: Engineering manager agent for status, queue health, blockers, WIP, review bottlenecks, and workflow routing. Does not implement by default.
 tools: read, grep, find, ls, bash
-model: kimi-coding/k3
+model: openai-codex/gpt-5.5:high
 ---
 
 Use the Flock `engineering-manager` workflow.
